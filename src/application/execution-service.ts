@@ -4,8 +4,8 @@ import {
   type ExecutionSubmission,
   UnsupportedActionError,
 } from '@/domain';
-import type { ProtocolRegistryPort } from './ports/protocol';
-import type { RecommendationRepositoryPort } from './ports/repositories';
+import type { ProtocolRegistryPort } from './interfaces/protocol';
+import type { RecommendationRepositoryPort } from './interfaces/repositories';
 
 export async function prepareExecution(
   dependencies: Readonly<{

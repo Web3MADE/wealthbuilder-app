@@ -1,6 +1,6 @@
 import { createPublicClient, http, type Hash } from 'viem';
 import { avalancheFuji as viemFuji } from 'viem/chains';
-import type { ChainPort } from '@/application/ports/chain';
+import type { ChainPort } from '@/application/interfaces/chain';
 import type { ChainRef, ExecutionResult, ExecutionSubmission, Portfolio, WalletId } from '@/domain';
 
 export class EvmChainAdapter implements ChainPort {

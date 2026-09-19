@@ -1,10 +1,10 @@
 import type { PersonalWealthPolicy } from '@/domain';
-import type { AuditRepositoryPort, PolicyRepositoryPort } from './ports/repositories';
+import type { AuditRepositoryPort, PolicyRepositoryPort } from './interfaces/repositories';
 export class PolicyService {
   constructor(
     private readonly policies: PolicyRepositoryPort,
     private readonly audit: AuditRepositoryPort,
-  ) {}
+  ) { }
   async save(policy: PersonalWealthPolicy): Promise<void> {
     await this.policies.save(policy);
     await this.audit.append({

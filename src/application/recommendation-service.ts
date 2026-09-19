@@ -5,9 +5,9 @@ import {
   type ProposedAction,
   type PolicyDecision,
 } from '@/domain';
-import type { AuditRepositoryPort } from './ports/repositories';
-import type { ProtocolRegistryPort } from './ports/protocol';
-import type { PriceProviderPort } from './ports/pricing';
+import type { AuditRepositoryPort } from './interfaces/repositories';
+import type { ProtocolRegistryPort } from './interfaces/protocol';
+import type { PriceProviderPort } from './interfaces/pricing';
 
 export type EvaluateActionDependencies = Readonly<{
   prices: PriceProviderPort;

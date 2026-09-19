@@ -4,7 +4,7 @@ import type {
   CapabilityQuery,
   ProtocolCapability,
   ProtocolPort,
-} from '@/application/ports/protocol';
+} from '@/application/interfaces/protocol';
 import type {
   ExecutionAuthorization,
   ExecutionPreview,
@@ -39,7 +39,7 @@ export class AaveV3ProtocolAdapter implements ProtocolPort {
     private readonly submit: (
       request: Readonly<{ to: Address; data: `0x${string}` }>,
     ) => Promise<string>,
-  ) {}
+  ) { }
   describeCapabilities(): readonly ProtocolCapability[] {
     return [
       {
