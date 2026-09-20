@@ -216,8 +216,8 @@ export function AppShell({ view, wallet }: { view: View; wallet: WalletConnectio
     sessionWallet && address && sessionWallet === address.toLowerCase() && !wrongChain,
   );
   const navigation = [
-    { href: '/', label: 'Home', key: 'home' },
-    { href: '/portfolio', label: 'Portfolio', key: 'portfolio' },
+    { href: '/wallet-demo', label: 'Home', key: 'home' },
+    { href: '/wallet-portfolio', label: 'Portfolio', key: 'portfolio' },
     { href: '/policy', label: 'Policy', key: 'policy' },
   ];
   return (

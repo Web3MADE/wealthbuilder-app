@@ -1,5 +1,5 @@
-import { ProductPage } from '@/bootstrap-client';
+import { EntryGate } from '@/presentation/entry/entry-gate';
 
-export default function HomePage() {
-  return <ProductPage view="home" />;
+export default function AppEntry() {
+  return <EntryGate />;
 }

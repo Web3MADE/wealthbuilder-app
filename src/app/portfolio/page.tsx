@@ -1,5 +1,5 @@
-import { ProductPage } from '@/bootstrap-client';
+import { PortfolioScreen } from '@/presentation/wealth/PortfolioScreen';
 
 export default function PortfolioPage() {
-  return <ProductPage view="portfolio" />;
+  return <PortfolioScreen />;
 }
