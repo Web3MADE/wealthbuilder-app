@@ -15,11 +15,12 @@ In another terminal, verify the fork or reset it:
 ```bash
 pnpm test:fork
 pnpm fork:reset
+pnpm fork:fund-usdc
 ```
 
-`test:fork` reads the chain, checks the funded account, reads a portfolio through WealthBuilder's Fuji adapter, verifies Aave and USDC bytecode, sends one local transfer, and waits for its receipt. `fork:reset` calls `anvil_reset` and removes local transactions. The fork keeps its upstream contract state. For repeatable upstream state, set `FUJI_FORK_BLOCK_NUMBER` to a block supported by your RPC provider. Set `FUJI_FORK_PORT` to change the local port and `FUJI_FORK_RPC_URL` to point the smoke test at that port.
+`fork:fund-usdc` is a local-only helper. It finds a holder from recent Fuji USDC transfers, impersonates that address on Anvil, and transfers the configured development amount to account 0. `test:fork` runs this helper, reads the chain, verifies Aave and USDC bytecode, sends one local transfer, executes a 20 USDC Aave supply, and verifies the wallet and supplied position. `fork:reset` re-applies the configured Fuji fork parameters before removing local transactions, so Aave state remains valid. For repeatable upstream state, set `FUJI_FORK_BLOCK_NUMBER` to a block supported by your RPC provider. Set `FUJI_FORK_PORT` to change the local port and `FUJI_FORK_RPC_URL` to point the smoke test at that port.
 
-To point the app's existing Fuji portfolio reader at the fork, start the app with `FUJI_RPC_URL=http://127.0.0.1:8545`. Keep `FUJI_FORK_UPSTREAM_RPC_URL` set to the remote endpoint in the Anvil terminal so the fork does not point to itself. These variables are documented in `.env.example`.
+To run chat execution against the fork, start the app with `FUJI_RPC_URL=http://127.0.0.1:8545`. Keep `FUJI_FORK_UPSTREAM_RPC_URL` set to the remote endpoint in the Anvil terminal so the fork does not point to itself. The chat uses the deterministic Anvil account only on localhost; it performs the exact USDC allowance and Aave V3 supply flow after policy approval. These variables are documented in `.env.example`.
 
 ## OpenCode planning
 

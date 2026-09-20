@@ -1,4 +1,5 @@
 import type { Money } from '../money/index';
+import type { Portfolio } from '../portfolio/index';
 export type ExecutionAuthorization = Readonly<{
   id: string;
   actionId: string;
@@ -19,8 +20,11 @@ export type ExecutionSubmission = Readonly<{
 }>;
 export type ExecutionResult = Readonly<{
   actionId: string;
-  reference: string;
+  reference?: string;
   state: 'CONFIRMED' | 'FAILED';
   confirmedAt?: Date;
   failureReason?: string;
+  approvalReference?: string;
+  stages: readonly ('PREPARING' | 'SIMULATING' | 'SUBMITTED' | 'CONFIRMED' | 'FAILED')[];
+  portfolio?: Portfolio;
 }>;

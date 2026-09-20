@@ -29,6 +29,7 @@ export class EvmChainAdapter implements ChainPort {
         reference: submission.reference,
         state: 'CONFIRMED',
         confirmedAt: new Date(),
+        stages: ['CONFIRMED'],
       };
     } catch {
       return {
@@ -36,6 +37,7 @@ export class EvmChainAdapter implements ChainPort {
         reference: submission.reference,
         state: 'FAILED',
         failureReason: 'Unable to confirm the submitted transaction.',
+        stages: ['FAILED'],
       };
     }
   }

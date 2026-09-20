@@ -17,9 +17,11 @@ if (command === 'start') {
   process.on('SIGINT', () => child.kill('SIGINT'));
   process.on('SIGTERM', () => child.kill('SIGTERM'));
 } else if (command === 'reset') {
+  const forking = { jsonRpcUrl: upstream };
+  if (process.env.FUJI_FORK_BLOCK_NUMBER) forking.blockNumber = Number(process.env.FUJI_FORK_BLOCK_NUMBER);
   const response = await fetch(localUrl, {
     method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'anvil_reset', params: [] }),
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'anvil_reset', params: [{ forking }] }),
   });
   const result = await response.json();
   if (!response.ok || result.error) throw new Error('Anvil reset failed. Is the local fork running?');
