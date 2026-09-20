@@ -29,3 +29,5 @@ Only test USDC has a configured nominal $1 price. AVAX and extra tokens display 
 Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` for validation. The browser test mocks wallet signing and API responses; it does not use live credentials.
 
 See [the manual Fuji smoke test](docs/goal-2-fuji-smoke.md) for the live flow.
+
+For the local Anvil fork and development-only OpenCode planning flow, see [Local AI Planning and Fuji Fork](docs/local-ai-and-fuji-fork.md).

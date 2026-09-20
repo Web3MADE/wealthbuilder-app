@@ -4,6 +4,7 @@ export * from './policy/index';
 export * from './policy/evaluate';
 export * from './actions/index';
 export * from './recommendations/index';
+export * from './planning/index';
 export * from './execution/index';
 export * from './audit/index';
 export * from './errors/index';
