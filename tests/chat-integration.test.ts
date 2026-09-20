@@ -74,6 +74,16 @@ describe('AI chat integration boundary', () => {
     await expect(new OpenCodeGoPlanner(config, fetcher).generateChat({ messages: [{ role: 'user', content: 'Move everything.' }] })).rejects.toMatchObject({ code: 'INVALID_PLAN', metadata: { schemaValidationFailure: true } });
   });
 
+  it('rejects malformed policy-change proposals safely', async () => {
+    const fetcher = vi.fn().mockResolvedValue(responses(JSON.stringify({
+      message: 'I can change the reserve.',
+      actionPlan: null,
+      policyChange: { type: 'SET_MINIMUM_LIQUID_STABLE_RESERVE', minimumLiquidStableReserveBps: 12_000 },
+    })));
+    await expect(new OpenCodeGoPlanner(config, fetcher).generateChat({ messages: [{ role: 'user', content: 'Keep more liquid.' }] }))
+      .rejects.toMatchObject({ code: 'INVALID_PLAN', metadata: { schemaValidationFailure: true } });
+  });
+
   it('surfaces provider errors without leaking provider details', async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { type: 'RateLimitError', message: 'private provider detail' } }), { status: 429 }));
     await expect(new OpenCodeGoPlanner(config, fetcher).generateChat({ messages: [{ role: 'user', content: 'Hello' }] })).rejects.toMatchObject({ code: 'PROVIDER_ERROR', metadata: { apiStatus: 429, apiErrorCode: 'RateLimitError' } });

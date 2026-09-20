@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { PlanningError, type AIPlannerPort, type PlannerMetadata, type PlannerResult } from '@/application/interfaces/ai-planner';
-import type { AIChatPort, ChatMessage, ChatResult } from '@/application/interfaces/ai-chat';
+import type { AIChatContext, AIChatPort, ChatMessage, ChatResult, PolicyChangeProposal } from '@/application/interfaces/ai-chat';
 import { ActionPlanSchema } from './action-plan-schema';
 
 export const OpenCodeModelSchema = z.enum([
@@ -56,10 +56,53 @@ const messagesResponseSchema = z.object({
 const chatEnvelopeSchema = z.object({
   message: z.string().trim().min(1).max(4000),
   actionPlan: z.unknown().nullable().optional(),
+  policyChange: z.unknown().nullable().optional(),
+}).strict();
+
+const policyChangeSchema: z.ZodType<PolicyChangeProposal> = z.object({
+  type: z.literal('SET_MINIMUM_LIQUID_STABLE_RESERVE'),
+  minimumLiquidStableReserveBps: z.number().int().min(0).max(10_000),
 }).strict();
 
 const systemPrompt = `You are a financial action planner for WealthBuilder. Return only a JSON object with exactly summary (string), reasoning (string), steps (array of strings), and proposedActions (array). A proposed action, when appropriate, must contain exactly type "SUPPLY", asset "usdc", amount (positive decimal string with at most six decimal places), protocol "aave-v3", and chain "avalanche-fuji". Use an empty proposedActions array when the user asks for portfolio information, asks for a clarification, requests an amount or strategy that cannot be safely proposed, or conflicts with approved protocols or Wealth Policy. Do not invent portfolio facts, balances, policies, yields, or approvals. Ask for clarification in summary, reasoning, or steps when required. A proposal must be policy-aware and must never suggest bypassing policy. Do not include transaction data, addresses, code, markdown, or instructions to execute. This is a proposal only.`;
-const chatSystemPrompt = `You are WealthBuilder, a careful conversational financial assistant. Return only a JSON object with exactly message (string) and actionPlan (object or null). Use actionPlan when the user asks for a specific financial action that can be represented safely; it must contain summary, reasoning, steps, and proposedActions. Proposed actions currently support only SUPPLY usdc to aave-v3 on avalanche-fuji with a positive decimal amount. Use null for informational responses, clarifying questions, policy conflicts, or requests that lack enough verified information. Do not invent portfolio facts, balances, policies, yields, approvals, or completed actions. Do not include transaction data, addresses, code, markdown, or execution instructions. This is a proposal only.`;
+const chatSystemPrompt = `You are WealthBuilder, a careful conversational financial assistant. Return only one JSON object with exactly message (string), actionPlan (object or null), and policyChange (object or null). Use actionPlan when the user asks for a financial action: it must contain summary, reasoning, steps, and proposedActions. Every proposed action may only use type "SUPPLY", a positive decimal amount with at most six decimals, and chain "avalanche-fuji". Asset and protocol must be lowercase identifiers. When the user explicitly requests a minimum liquid stablecoin reserve, including language like "keep 25% liquid", return a policyChange proposal immediately with the requested percentage converted to basis points (25% is 2500); do not ask for confirmation because the application shows the confirmation UI. Its exact shape is {"type":"SET_MINIMUM_LIQUID_STABLE_RESERVE","minimumLiquidStableReserveBps":integer from 0 to 10000}. The application makes every policy decision and applies policy changes only after confirmation; never claim an action is allowed, blocked, completed, or a policy has changed. Use null for fields that do not apply. Use the supplied CURRENT WEALTHBUILDER CONTEXT as the only source for portfolio and policy facts. Do not invent balances, policies, yields, approvals, completed actions, transaction data, addresses, code, markdown, or execution instructions. This is a proposal only.`;
+
+function decimal(value: bigint, decimals: number) {
+  const whole = value / 10n ** BigInt(decimals);
+  const fraction = (value % 10n ** BigInt(decimals)).toString().padStart(decimals, '0').replace(/0+$/, '');
+  return fraction ? `${whole}.${fraction}` : whole.toString();
+}
+
+function contextPrompt(context: AIChatContext): string {
+  const totalMicros = context.portfolio.positions.reduce((total, position) => total + position.value.micros, 0n);
+  const snapshot = {
+    chain: context.portfolio.chain.id,
+    portfolio: {
+      totalPortfolioValueUsd: decimal(totalMicros, 6),
+      positions: context.portfolio.positions.map((position) => ({
+        asset: position.asset.id,
+        symbol: position.asset.symbol,
+        balance: decimal(position.amount.value, position.amount.decimals),
+        estimatedValueUsd: decimal(position.value.micros, 6),
+        location: position.location,
+        protocol: position.protocolId ?? null,
+      })),
+    },
+    personalWealthPolicy: {
+      allowedAssets: context.policy.allowedAssetIds,
+      excludedAssets: context.policy.excludedAssetIds,
+      allowedProtocols: context.policy.allowedProtocolIds,
+      maxTransactionUsd: decimal(context.policy.maxSingleTransactionValue.micros, 6),
+      maxAutonomousUsd: decimal(context.policy.autonomy.maxTransactionValue.micros, 6),
+      autonomyEnabled: context.policy.autonomy.enabled,
+      maxAssetConcentrationPercent: context.policy.maxAssetConcentrationBps / 100,
+      minimumLiquidStableReservePercent: context.policy.minimumLiquidStableReserveBps / 100,
+    },
+    supportedActions: context.supportedActionTypes,
+    knownAssets: context.supportedAssets.map((asset) => asset.id),
+  };
+  return `CURRENT WEALTHBUILDER CONTEXT\n${JSON.stringify(snapshot)}`;
+}
 
 function responseText(payload: unknown, endpoint: EndpointFamily): string {
   if (endpoint === 'chat-completions') {
@@ -97,18 +140,23 @@ function normalizeActionPlanCandidate(value: unknown): unknown {
     proposedActions: proposedActions.map((candidate) => {
       if (!candidate || typeof candidate !== 'object') return candidate;
       const action = candidate as Record<string, unknown>;
-      const asset = typeof action.asset === 'string' && action.asset.toLowerCase() === 'usdc' ? 'usdc' : action.asset;
-      const protocol = typeof action.protocol === 'string' && action.protocol.toLowerCase().replace(/\s+/g, '-') === 'aave-v3' ? 'aave-v3' : action.protocol;
+      const asset = typeof action.asset === 'string' ? action.asset.toLowerCase().replace(/\s+/g, '-') : action.asset;
+      const rawProtocol = action.protocol ?? action.protocolId;
+      const normalizedProtocol = typeof rawProtocol === 'string' ? rawProtocol.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : rawProtocol;
+      const protocol = normalizedProtocol === 'aave-v3-fuji' ? 'aave-v3' : normalizedProtocol;
       const chainValue = action.chain ?? action.network;
-      const chain = typeof chainValue === 'string' && chainValue.toLowerCase().replace(/\s+/g, '-') === 'avalanche-fuji' ? 'avalanche-fuji' : chainValue;
+      const normalizedChain = typeof chainValue === 'string' ? chainValue.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : chainValue;
+      const chain = typeof normalizedChain === 'string' && normalizedChain.startsWith('avalanche-fuji') ? 'avalanche-fuji' : chainValue;
       const typeValue = action.type ?? action.action;
       const type = typeof typeValue === 'string' && typeValue.toUpperCase() === 'SUPPLY' ? 'SUPPLY' : typeValue;
-      return { type, asset, amount: action.amount, protocol, chain };
+      const rawAmount = action.amount ?? action.amountUsdc;
+      const amount = typeof rawAmount === 'number' && Number.isFinite(rawAmount) ? String(rawAmount) : rawAmount;
+      return { type, asset, amount, protocol, chain };
     }),
   };
 }
 
-function parseChatText(text: string): Pick<ChatResult, 'message' | 'plan'> {
+function parseChatText(text: string): Pick<ChatResult, 'message' | 'plan' | 'policyChange'> {
   let content: unknown;
   try {
     content = parsePlanText(text);
@@ -119,10 +167,15 @@ function parseChatText(text: string): Pick<ChatResult, 'message' | 'plan'> {
   }
   const envelope = chatEnvelopeSchema.safeParse(content);
   if (envelope.success) {
-    if (envelope.data.actionPlan === null || envelope.data.actionPlan === undefined) return { message: envelope.data.message };
+    const policyChange = envelope.data.policyChange === null || envelope.data.policyChange === undefined
+      ? undefined
+      : policyChangeSchema.safeParse(envelope.data.policyChange);
+    if (policyChange && !policyChange.success) throw new Error('OpenCode chat policy change was invalid');
+    if (envelope.data.actionPlan === null || envelope.data.actionPlan === undefined)
+      return { message: envelope.data.message, ...(policyChange ? { policyChange: policyChange.data } : {}) };
     const plan = ActionPlanSchema.safeParse(normalizeActionPlanCandidate(envelope.data.actionPlan));
     if (!plan.success) throw new Error('OpenCode chat action plan was invalid');
-    return { message: envelope.data.message, plan: plan.data };
+    return { message: envelope.data.message, plan: plan.data, ...(policyChange ? { policyChange: policyChange.data } : {}) };
   }
   const directPlan = ActionPlanSchema.safeParse(normalizeActionPlanCandidate(content));
   if (directPlan.success) return { message: directPlan.data.summary, plan: directPlan.data };
@@ -203,7 +256,7 @@ export class OpenCodeGoPlanner implements AIPlannerPort, AIChatPort {
     }
   }
 
-  async generateChat(input: Readonly<{ messages: readonly ChatMessage[] }>): Promise<ChatResult> {
+  async generateChat(input: Readonly<{ messages: readonly ChatMessage[]; context?: AIChatContext }>): Promise<ChatResult> {
     const started = performance.now();
     const { endpoint } = models.find((candidate) => candidate.id === this.config.model)!;
     const metadata = (success: boolean, schemaValidationFailure: boolean, apiStatus?: number, apiErrorCode?: string): PlannerMetadata => ({
@@ -213,13 +266,14 @@ export class OpenCodeGoPlanner implements AIPlannerPort, AIChatPort {
       ...(apiErrorCode === undefined ? {} : { apiErrorCode }),
     });
     const messages = input.messages.map((message) => ({ role: message.role, content: message.content }));
+    const instructions = input.context ? `${chatSystemPrompt}\n\n${contextPrompt(input.context)}` : chatSystemPrompt;
     const body = endpoint === 'chat-completions'
-      ? { model: this.config.model, stream: false, messages: [{ role: 'system', content: chatSystemPrompt }, ...messages] }
+      ? { model: this.config.model, stream: false, messages: [{ role: 'system', content: instructions }, ...messages] }
       : endpoint === 'messages'
-        ? { model: this.config.model, max_tokens: 1200, system: chatSystemPrompt, messages }
-        : { model: this.config.model, stream: false, instructions: chatSystemPrompt, input: messages };
+        ? { model: this.config.model, max_tokens: 1200, system: instructions, messages }
+        : { model: this.config.model, stream: false, instructions, input: messages };
     try {
-      let parsed: Pick<ChatResult, 'message' | 'plan'>;
+      let parsed: Pick<ChatResult, 'message' | 'plan' | 'policyChange'>;
       const { text, status } = await requestProviderText(this.fetcher, this.config, endpoint, body, metadata);
       try { parsed = parseChatText(text); }
       catch { throw new PlanningError('INVALID_PLAN', metadata(false, true, status)); }
