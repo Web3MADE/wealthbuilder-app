@@ -26,14 +26,13 @@ To point the app's existing Fuji portfolio reader at the fork, start the app wit
 Set these server-side variables in `.env.local`:
 
 ```dotenv
-OPENCODE_API_URL=https://opencode.ai/inference/openai/v1/chat/completions
-OPENCODE_API_KEY=your-service-account-key
-OPENCODE_MODEL=minimax-m2.7
+OPENCODE_API_KEY=your-opencode-go-subscription-key
+OPENCODE_MODEL=deepseek-v4-pro
 ```
 
-`OPENCODE_API_URL` and `OPENCODE_MODEL` have the defaults shown above. `OPENCODE_API_KEY` is required. The adapter uses OpenCode's OpenAI-compatible chat-completions endpoint; select a model that supports that endpoint. OpenCode serves some models through different API shapes, so those require an adapter change. The adapter never passes a transaction tool to the model.
+`OPENCODE_API_KEY` is required. `OPENCODE_MODEL` defaults to DeepSeek V4 Pro and can be changed in the development page. DeepSeek V4 Pro, GLM 5.3, and Kimi K2.6 use OpenCode Go chat completions; Qwen3.7 Plus uses OpenCode Go Messages; GPT-5.6 Luna uses OpenCode Go Responses. The adapter selects the endpoint internally and never passes a transaction tool to the model. `OPENCODE_GO_BASE_URL` is optional for local debugging; it defaults to `https://opencode.ai/zen/go/v1`.
 
-Run `pnpm dev` and open `/dev/ai-planning`. Enter a request, create the plan, and inspect the steps, proposed supply action, and provider metadata. The status selector previews all presentation states. This route and its API return 404 in production. A missing API key returns a clear configuration error. Invalid model output returns an invalid-plan error with schema failure metadata. No policy approval or transaction is performed.
+Run `pnpm dev` and open `/dev/ai-planning`. Select one of the five models, enter a request, create the plan, and inspect the steps, proposed supply action, and provider metadata. The status selector previews all presentation states. This route and its API return 404 in production. A missing API key returns a clear configuration error. Invalid model output returns an invalid-plan error with schema failure metadata. API errors include the HTTP status and a safe error code without logging provider bodies or secrets. No policy approval or transaction is performed.
 
 Example validated output:
 

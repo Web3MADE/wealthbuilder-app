@@ -3,9 +3,12 @@ import type { ActionPlan } from '@/domain';
 export type PlannerMetadata = Readonly<{
   provider: string;
   model: string;
+  endpointFamily?: string;
   latencyMs: number;
   success: boolean;
   schemaValidationFailure: boolean;
+  apiStatus?: number;
+  apiErrorCode?: string;
 }>;
 
 export type PlannerResult = Readonly<{ plan: ActionPlan; metadata: PlannerMetadata }>;

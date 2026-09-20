@@ -17,5 +17,5 @@ export const ActionPlanSchema: z.ZodType<ActionPlan> = z.object({
     amount,
     protocol: z.literal('aave-v3'),
     chain: z.literal('avalanche-fuji'),
-  }).strict()).min(1).max(3),
+  }).strict()).max(3),
 }).strict();
