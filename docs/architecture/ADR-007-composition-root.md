@@ -10,7 +10,7 @@ Constructing Infrastructure dependencies in routes or components would obscure d
 
 ## Decision
 
-`src/bootstrap.ts` is the composition root. It is the place to instantiate repositories, chain and protocol adapters, and AI adapters, then inject them into application services. Routes and components must not construct Infrastructure dependencies themselves.
+`src/bootstrap.ts` wires server-side repositories, authentication, Fuji reads, and application services. `src/bootstrap-client.tsx` wires the browser wallet adapter to the presentation shell. Routes and presentation components do not construct Infrastructure dependencies.
 
 ## Consequences
 

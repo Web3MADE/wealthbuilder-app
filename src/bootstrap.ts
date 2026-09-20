@@ -1,4 +1,17 @@
 import { evaluateAction } from '@/application/recommendation-service';
+import { PortfolioService } from '@/application/portfolio-service';
+import { PolicyService } from '@/application/policy-service';
+import { WalletAuthService } from '@/application/wallet-auth-service';
+import {
+  AvalancheFujiAdapter,
+  parseFujiTokens,
+} from '@/infrastructure/chains/avalanche-fuji-adapter';
+import { ConfiguredFujiPrices } from '@/infrastructure/pricing/configured-fuji-prices';
+import { DrizzlePolicyRepository } from '@/infrastructure/persistence/drizzle-policy-repository';
+import { DrizzleUserRepository } from '@/infrastructure/persistence/drizzle-user-repository';
+import { createDatabase } from '@/infrastructure/persistence/postgres';
+import { SiweVerifier } from '@/infrastructure/auth/siwe';
+import { aaveV3Fuji, fujiRpcUrl } from '@/config';
 import {
   atomic,
   usd,
@@ -6,6 +19,31 @@ import {
   type Portfolio,
   type ProposedAction,
 } from '@/domain';
+
+let database: ReturnType<typeof createDatabase> | null = null;
+function db() {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error('DATABASE_URL is required for wallet identity and policy persistence.');
+  return (database ??= createDatabase(url));
+}
+
+export function portfolioService() {
+  const prices = new ConfiguredFujiPrices();
+  const chain = new AvalancheFujiAdapter(
+    process.env.FUJI_RPC_URL ?? fujiRpcUrl,
+    parseFujiTokens(process.env.FUJI_ERC20_TOKENS_JSON, aaveV3Fuji.assets.usdc!),
+    prices,
+  );
+  return new PortfolioService(chain);
+}
+
+export function policyService() {
+  return new PolicyService(new DrizzlePolicyRepository(db()));
+}
+
+export function walletAuthService() {
+  return new WalletAuthService(new SiweVerifier(), new DrizzleUserRepository(db()));
+}
 
 export async function evaluateDemoAction(
   input: Readonly<{ amountUsdc: number; reserveBps: number; autonomousLimitUsdc: number }>,
@@ -34,12 +72,9 @@ export async function evaluateDemoAction(
     minimumLiquidStableReserveBps: input.reserveBps,
     maxSingleTransactionValue: usd(100_000_000n),
     allowedProtocolIds: ['aave-v3'],
-    riskTolerance: 'MODERATE',
     autonomy: {
       enabled: true,
       maxTransactionValue: usd(BigInt(input.autonomousLimitUsdc) * 1_000_000n),
-      sessionMaxCumulativeValue: usd(100_000_000n),
-      sessionDurationMinutes: 60,
     },
     createdAt: now,
   };
@@ -68,30 +103,6 @@ export async function evaluateDemoAction(
             expiresAt: portfolio.expiresAt,
           },
         ],
-      },
-      protocols: {
-        get: () => ({
-          describeCapabilities: () => [
-            {
-              protocolId: 'aave-v3',
-              protocolType: 'LENDING',
-              chain,
-              supportedActions: ['SUPPLY'],
-              supportedAssetIds: ['usdc'],
-              authorizationModes: ['WALLET_APPROVAL'],
-              riskTier: 'MODERATE',
-              configurationVersion: 'demo',
-            },
-          ],
-          supports: () => true,
-          prepare: async () => {
-            throw new Error('not used');
-          },
-          execute: async () => {
-            throw new Error('not used');
-          },
-        }),
-        findSupport: async () => [],
       },
       audit: { append: async () => undefined },
     },

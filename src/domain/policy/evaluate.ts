@@ -1,26 +1,13 @@
-import {
-  multiplyPrice,
-  portfolioValue,
-  type PersonalWealthPolicy,
-  type PolicyDecision,
-  type PolicyViolation,
-  type Portfolio,
-  type PriceQuote,
-  type ProposedAction,
-  type RiskTier,
-} from '../index';
+import { multiplyPrice } from '../money/index';
+import type { ProposedAction } from '../actions/index';
+import type { PersonalWealthPolicy, PolicyDecision, PolicyViolation } from './index';
+import { portfolioValue, type Portfolio, type PriceQuote } from '../portfolio/index';
 
 export type PolicyEvaluationContext = Readonly<{
   now: Date;
   portfolio: Portfolio;
   quotes: readonly PriceQuote[];
-  protocolRisk: RiskTier | null;
 }>;
-const riskOrder: Readonly<Record<RiskTier, number>> = {
-  CONSERVATIVE: 0,
-  MODERATE: 1,
-  AGGRESSIVE: 2,
-};
 
 export function evaluatePolicy(
   policy: PersonalWealthPolicy,
@@ -29,52 +16,55 @@ export function evaluatePolicy(
 ): PolicyDecision {
   const violations: PolicyViolation[] = [];
   const quote = context.quotes.find((candidate) => candidate.assetId === action.asset.id);
-  if (context.portfolio.expiresAt <= context.now)
-    violations.push({
-      code: 'STALE_PORTFOLIO',
-      message: 'Portfolio data has expired and cannot safely authorize execution.',
-    });
   if (!quote || quote.expiresAt <= context.now)
-    violations.push({ code: 'PRICE_UNAVAILABLE', message: 'A current trusted price is required.' });
+    violations.push({ code: 'PRICE_UNAVAILABLE', details: { assetId: action.asset.id } });
   if (!policy.allowedAssetIds.includes(action.asset.id))
     violations.push({
       code: 'ASSET_NOT_ALLOWED',
-      message: `${action.asset.symbol} is not allowed by this policy.`,
+      details: { assetId: action.asset.id },
     });
   if (policy.excludedAssetIds.includes(action.asset.id))
     violations.push({
       code: 'ASSET_EXCLUDED',
-      message: `${action.asset.symbol} is excluded by this policy.`,
+      details: { assetId: action.asset.id },
     });
   if (!policy.allowedProtocolIds.includes(action.protocolId))
     violations.push({
       code: 'PROTOCOL_NOT_ALLOWED',
-      message: `${action.protocolId} is not approved by this policy.`,
-    });
-  if (!context.protocolRisk || riskOrder[context.protocolRisk] > riskOrder[policy.riskTolerance])
-    violations.push({
-      code: 'PROTOCOL_NOT_ALLOWED',
-      message: 'The protocol risk tier exceeds this policy.',
+      details: { protocolId: action.protocolId },
     });
 
   const actionValue = quote
     ? multiplyPrice(action.amount, quote.priceMicrosPerUnit)
     : { currency: 'USD' as const, micros: 0n };
-  const walletAmount = context.portfolio.positions
-    .filter((position) => position.location === 'WALLET' && position.asset.id === action.asset.id)
-    .reduce((total, position) => total + position.amount.value, 0n);
-  if (walletAmount < action.amount.value)
-    violations.push({
-      code: 'INSUFFICIENT_LIQUID_BALANCE',
-      message: 'The wallet does not hold enough of this asset.',
-    });
   if (actionValue.micros > policy.maxSingleTransactionValue.micros)
     violations.push({
       code: 'TRANSACTION_LIMIT_EXCEEDED',
-      message: 'The action exceeds the transaction limit.',
+      details: {
+        actionValueMicros: actionValue.micros.toString(),
+        maximumMicros: policy.maxSingleTransactionValue.micros.toString(),
+      },
     });
   const totalValue = portfolioValue(context.portfolio).micros;
-  const stableAfter = context.portfolio.positions
+  const postActionPortfolioValue = totalValue + actionValue.micros;
+  const postActionAssetValue =
+    context.portfolio.positions
+      .filter((position) => position.asset.id === action.asset.id)
+      .reduce((total, position) => total + position.value.micros, 0n) + actionValue.micros;
+  const concentrationBps =
+    postActionPortfolioValue === 0n
+      ? 0n
+      : (postActionAssetValue * 10_000n) / postActionPortfolioValue;
+  if (concentrationBps > BigInt(policy.maxAssetConcentrationBps))
+    violations.push({
+      code: 'ASSET_CONCENTRATION_EXCEEDED',
+      details: {
+        assetId: action.asset.id,
+        concentrationBps: concentrationBps.toString(),
+        maximumBps: policy.maxAssetConcentrationBps.toString(),
+      },
+    });
+  const liquidStableAfter = context.portfolio.positions
     .filter((position) => position.location === 'WALLET' && position.asset.isStablecoin)
     .reduce(
       (total, position) =>
@@ -83,13 +73,18 @@ export function evaluatePolicy(
         (position.asset.id === action.asset.id ? actionValue.micros : 0n),
       0n,
     );
+  const stableReserveBps =
+    postActionPortfolioValue === 0n ? 0n : (liquidStableAfter * 10_000n) / postActionPortfolioValue;
   if (
-    totalValue > 0n &&
-    (stableAfter * 10_000n) / totalValue < BigInt(policy.minimumLiquidStableReserveBps)
+    postActionPortfolioValue > 0n &&
+    stableReserveBps < BigInt(policy.minimumLiquidStableReserveBps)
   )
     violations.push({
       code: 'LIQUIDITY_RESERVE_BREACHED',
-      message: 'The action breaches the liquid stablecoin reserve.',
+      details: {
+        reserveBps: stableReserveBps.toString(),
+        minimumBps: policy.minimumLiquidStableReserveBps.toString(),
+      },
     });
   if (violations.length > 0)
     return { outcome: 'BLOCKED', actionValue, violations, evaluatedAt: context.now };
@@ -102,7 +97,10 @@ export function evaluatePolicy(
           ? [
               {
                 code: 'AUTONOMY_LIMIT_EXCEEDED',
-                message: 'The action is allowed but requires approval.',
+                details: {
+                  actionValueMicros: actionValue.micros.toString(),
+                  maximumMicros: policy.autonomy.maxTransactionValue.micros.toString(),
+                },
               },
             ]
           : [],

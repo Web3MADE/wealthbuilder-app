@@ -1,5 +1,7 @@
 node_modules
 .next
+.next-playwright
+.next-build
 dist
 coverage
 playwright-report
@@ -7,4 +9,3 @@ test-results
 .env
 .env.local
 .DS_Store
-

@@ -1,6 +1,13 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  distDir: process.env.WEALTHBUILDER_NEXT_DIST_DIR ?? '.next',
+  webpack: (config, { webpack }) => {
+    // Coinbase's optional x402 payment modules are referenced by the wallet UI
+    // bundle. WealthBuilder does not use payments, so exclude those modules.
+    config.plugins.push(new webpack.IgnorePlugin({ resourceRegExp: /^@x402\// }));
+    return config;
+  },
   headers: async () => [
     {
       source: '/:path*',

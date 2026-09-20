@@ -11,6 +11,11 @@ const rules = [
     directory: 'src/application',
     forbidden: /from ['"]@\/(?:infrastructure|presentation|config)['"]/,
   },
+  {
+    directory: 'src/presentation',
+    forbidden:
+      /from ['"](?:@\/infrastructure|viem|wagmi|@reown|drizzle-orm|postgres|@supabase)['"]/,
+  },
 ];
 async function files(directory) {
   const entries = await readdir(directory, { withFileTypes: true });

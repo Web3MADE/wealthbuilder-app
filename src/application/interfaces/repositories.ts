@@ -2,6 +2,7 @@ import type {
   AuditEvent,
   ChainRef,
   PersonalWealthPolicy,
+  PolicySettings,
   Portfolio,
   Recommendation,
   WalletId,
@@ -12,7 +13,11 @@ export interface PortfolioRepositoryPort {
 }
 export interface PolicyRepositoryPort {
   getActive(walletId: WalletId, chain: ChainRef): Promise<PersonalWealthPolicy | null>;
-  save(policy: PersonalWealthPolicy): Promise<void>;
+  saveNext(
+    walletId: WalletId,
+    chain: ChainRef,
+    settings: PolicySettings,
+  ): Promise<PersonalWealthPolicy>;
 }
 export interface RecommendationRepositoryPort {
   get(id: string): Promise<Recommendation | null>;

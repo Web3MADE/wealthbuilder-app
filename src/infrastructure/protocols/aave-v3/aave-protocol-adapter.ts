@@ -39,7 +39,7 @@ export class AaveV3ProtocolAdapter implements ProtocolPort {
     private readonly submit: (
       request: Readonly<{ to: Address; data: `0x${string}` }>,
     ) => Promise<string>,
-  ) { }
+  ) {}
   describeCapabilities(): readonly ProtocolCapability[] {
     return [
       {

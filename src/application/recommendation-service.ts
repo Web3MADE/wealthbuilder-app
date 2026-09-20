@@ -6,12 +6,10 @@ import {
   type PolicyDecision,
 } from '@/domain';
 import type { AuditRepositoryPort } from './interfaces/repositories';
-import type { ProtocolRegistryPort } from './interfaces/protocol';
 import type { PriceProviderPort } from './interfaces/pricing';
 
 export type EvaluateActionDependencies = Readonly<{
   prices: PriceProviderPort;
-  protocols: ProtocolRegistryPort;
   audit: AuditRepositoryPort;
 }>;
 
@@ -24,19 +22,11 @@ export async function evaluateAction(
     now: Date;
   }>,
 ): Promise<PolicyDecision> {
-  const protocol = dependencies.protocols.get(input.action.protocolId);
-  const capabilities = protocol?.describeCapabilities() ?? [];
-  const capability = capabilities.find(
-    (candidate) =>
-      candidate.chain.id === input.action.chain.id &&
-      candidate.supportedAssetIds.includes(input.action.asset.id),
-  );
   const quotes = await dependencies.prices.getQuotes([input.action.asset]);
   const decision = evaluatePolicy(input.policy, input.action, {
     now: input.now,
     portfolio: input.portfolio,
     quotes,
-    protocolRisk: capability?.riskTier ?? null,
   });
   await dependencies.audit.append({
     id: crypto.randomUUID(),

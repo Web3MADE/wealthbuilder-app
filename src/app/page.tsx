@@ -1,5 +1,5 @@
-import Dashboard from '@/presentation/shared/dashboard';
+import { ProductPage } from '@/bootstrap-client';
 
 export default function HomePage() {
-  return <Dashboard />;
+  return <ProductPage view="home" />;
 }

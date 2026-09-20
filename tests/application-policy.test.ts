@@ -33,12 +33,9 @@ const policy: PersonalWealthPolicy = {
   minimumLiquidStableReserveBps: 2_000,
   maxSingleTransactionValue: usd(100_000_000n),
   allowedProtocolIds: ['aave-v3'],
-  riskTolerance: 'MODERATE',
   autonomy: {
     enabled: true,
     maxTransactionValue: usd(25_000_000n),
-    sessionMaxCumulativeValue: usd(100_000_000n),
-    sessionDurationMinutes: 60,
   },
   createdAt: now,
 };
@@ -71,30 +68,6 @@ describe('evaluateAction', () =>
               expiresAt: portfolio.expiresAt,
             },
           ],
-        },
-        protocols: {
-          get: () => ({
-            describeCapabilities: () => [
-              {
-                protocolId: 'aave-v3',
-                protocolType: 'LENDING',
-                chain,
-                supportedActions: ['SUPPLY'],
-                supportedAssetIds: ['usdc'],
-                authorizationModes: ['WALLET_APPROVAL'],
-                riskTier: 'MODERATE',
-                configurationVersion: 'test',
-              },
-            ],
-            supports: () => true,
-            prepare: async () => {
-              throw new Error('unused');
-            },
-            execute: async () => {
-              throw new Error('unused');
-            },
-          }),
-          findSupport: async () => [],
         },
         audit: {
           append: async (event) => {
