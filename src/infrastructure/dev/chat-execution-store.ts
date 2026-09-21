@@ -23,6 +23,10 @@ export class DevChatExecutionStore {
     this.consumed.add(actionId);
     return pending;
   }
+
+  release(actionId: string) {
+    this.consumed.delete(actionId);
+  }
 }
 
 const storeKey = Symbol.for('wealthbuilder.devChatExecutionStore');

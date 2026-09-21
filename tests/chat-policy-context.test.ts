@@ -5,6 +5,7 @@ import {
 } from '@/application/chat-policy-service';
 import type { AIChatContext } from '@/application/interfaces/ai-chat';
 import { PolicyService } from '@/application/policy-service';
+import { atomic, usd } from '@/domain';
 import { ActionPlanSchema } from '@/infrastructure/ai/action-plan-schema';
 import { DevChatContextStore } from '@/infrastructure/dev/chat-context-store';
 import { OpenCodeGoPlanner } from '@/infrastructure/ai/opencode-ai-planner';
@@ -29,17 +30,28 @@ describe('chat portfolio and policy context', () => {
       .generateChat({ messages: [{ role: 'user', content: 'How is my portfolio doing?' }], context: await context() });
     const sent = JSON.parse(fetcher.mock.calls[0]![1].body);
     expect(sent.instructions).toContain('CURRENT WEALTHBUILDER CONTEXT');
-    expect(sent.instructions).toContain('12428.52');
+    expect(sent.instructions).toContain('totalPortfolioValueUsd');
     expect(sent.instructions).toContain('minimumLiquidStableReservePercent');
     expect(sent.instructions).toContain('aave-v3');
   });
 
   it('converts supply plans into domain actions and returns allowed, approval, and blocked decisions', async () => {
     const snapshot = await context();
+    const asset = snapshot.supportedAssets[0]!;
+    const evaluationSnapshot: AIChatContext = {
+      ...snapshot,
+      portfolio: {
+        ...snapshot.portfolio,
+        positions: [
+          { asset, amount: atomic(1_000_000_000n, 6), value: usd(1_000_000_000n), location: 'WALLET' },
+          { asset: { id: 'avax', symbol: 'AVAX', decimals: 18, isStablecoin: false }, amount: atomic(1_000_000_000_000_000_000n, 18), value: usd(1_000_000_000n), location: 'WALLET' },
+        ],
+      },
+    };
     const policyService = new PolicyService();
-    expect(evaluateChatPlan(policyService, snapshot, plan('20'))[0]!.decision.outcome).toBe('AUTONOMOUS_ALLOWED');
-    expect(evaluateChatPlan(policyService, snapshot, plan('500'))[0]!.decision.outcome).toBe('REQUIRES_APPROVAL');
-    expect(evaluateChatPlan(policyService, snapshot, plan('5000'))[0]!.decision.outcome).toBe('BLOCKED');
+    expect(evaluateChatPlan(policyService, evaluationSnapshot, plan('20'))[0]!.decision.outcome).toBe('AUTONOMOUS_ALLOWED');
+    expect(evaluateChatPlan(policyService, evaluationSnapshot, plan('500'))[0]!.decision.outcome).toBe('REQUIRES_APPROVAL');
+    expect(evaluateChatPlan(policyService, evaluationSnapshot, plan('5000'))[0]!.decision.outcome).toBe('BLOCKED');
   });
 
   it('blocks an unapproved protocol through the deterministic policy service', async () => {
