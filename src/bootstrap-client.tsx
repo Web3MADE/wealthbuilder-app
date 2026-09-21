@@ -1,10 +1,13 @@
 'use client';
 
 import { AppShell } from '@/presentation/shell/app-shell';
-import { WalletProviders } from '@/infrastructure/wallet/providers';
+import { WalletProviders as WalletProviderBase } from '@/infrastructure/wallet/providers';
 import { useWalletConnection } from '@/infrastructure/wallet/use-wallet-connection';
+import { ZeroDevSmartAccountProvider } from '@/infrastructure/zerodev/zerodev-smart-account-provider';
 
-export { WalletProviders };
+export function WalletProviders({ children }: { children: React.ReactNode }) {
+  return <WalletProviderBase><ZeroDevSmartAccountProvider>{children}</ZeroDevSmartAccountProvider></WalletProviderBase>;
+}
 
 export function ProductPage({ view }: { view: 'home' | 'portfolio' | 'policy' }) {
   const wallet = useWalletConnection();
