@@ -114,6 +114,7 @@ Avoid:
 - duplicated logic
 - giant files/classes
 - introducing dependencies without a clear need
+- lint formatting on all code changes (CODE MUST BE READABLE)
 
 Group related behavior into cohesive modules.
 
