@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { existingUser as user } from "@/presentation/dev/seeded-users";
+import Link from "next/link";
 import { WealthChat, WealthIcon, WealthShell } from "./WealthShell";
+import { formatPolicyUsd, type ActivePolicyView, useActivePolicy } from './use-active-policy';
 
 type StrategyTab = "overview" | "recommendations" | "opportunities" | "risk" | "scenarios";
 const recommendations = [
@@ -20,12 +21,16 @@ function Goal() {
   return <section className="wb-strategy-goal wb-panel"><span className="wb-goal-icon">⌂</span><div><strong>Long-term wealth</strong><p>Grow and build financial freedom</p></div><span className="wb-mobile-chevron">›</span><button type="button">View goal</button></section>;
 }
 
-function PolicyMetrics() {
-  return <div className="wb-policy-metrics"><section className="wb-panel"><small>Risk tolerance</small><strong>{user.policy.risk}</strong><i/></section><section className="wb-panel"><small>Asset preference</small><strong>{user.policy.asset}</strong><span className="wb-token-pair"><b>₿</b><b>♦</b><em>+2</em></span></section><section className="wb-panel"><small>Liquidity reserve</small><strong>{user.policy.liquidity}</strong><i/></section><section className="wb-panel"><small>AI control level</small><strong>{user.policy.ai}</strong><i/></section></div>;
+function PolicyMetrics({ policy }: { policy: ActivePolicyView | null }) {
+  return <div className="wb-policy-metrics"><section className="wb-panel"><small>Risk level</small><strong>{policy?.riskLevel ?? 'Loading…'}</strong><i/></section><section className="wb-panel"><small>Max asset concentration</small><strong>{policy ? `${policy.maxAssetConcentrationPercent}%` : 'Loading…'}</strong><i/></section><section className="wb-panel"><small>Minimum liquid reserve</small><strong>{policy ? `${policy.minimumLiquidReservePercent}%` : 'Loading…'}</strong><i/></section><section className="wb-panel"><small>AI autonomy</small><strong>{policy ? (policy.autonomyEnabled ? `Up to ${formatPolicyUsd(policy.autonomyLimitUsd)}` : 'Approval required') : 'Loading…'}</strong><i/></section></div>;
 }
 
-function MobilePolicySummary() {
-  return <div className="wb-mobile-policy-summary wb-panel"><div><WealthIcon name="strategy" size={16}/><span>Risk tolerance</span><strong>{user.policy.risk}</strong></div><div><WealthIcon name="portfolio" size={16}/><span>Asset preference</span><strong>{user.policy.asset}</strong></div><div><WealthIcon name="shield" size={16}/><span>Liquidity reserve</span><strong>{user.policy.liquidity}</strong></div><div><WealthIcon name="settings" size={16}/><span>AI control level</span><strong>{user.policy.ai}</strong></div></div>;
+function MobilePolicySummary({ policy }: { policy: ActivePolicyView | null }) {
+  return <div className="wb-mobile-policy-summary wb-panel"><div><WealthIcon name="strategy" size={16}/><span>Risk level</span><strong>{policy?.riskLevel ?? '…'}</strong></div><div><WealthIcon name="portfolio" size={16}/><span>Asset concentration</span><strong>{policy ? `${policy.maxAssetConcentrationPercent}% maximum` : '…'}</strong></div><div><WealthIcon name="shield" size={16}/><span>Liquid reserve</span><strong>{policy ? `${policy.minimumLiquidReservePercent}% minimum` : '…'}</strong></div><div><WealthIcon name="settings" size={16}/><span>AI autonomy</span><strong>{policy ? (policy.autonomyEnabled ? `Up to ${formatPolicyUsd(policy.autonomyLimitUsd)}` : 'Approval required') : '…'}</strong></div></div>;
+}
+
+function PolicyDetails({ policy }: { policy: ActivePolicyView | null }) {
+  return <section className="wb-policy-details wb-panel"><small>Active Wealth Policy {policy ? `· v${policy.version}` : ''}</small><div><span>Transaction limit<strong>{policy ? formatPolicyUsd(policy.transactionLimitUsd) : 'Loading…'}</strong></span><span>Approved protocols<strong>{policy?.allowedProtocols.join(', ') ?? 'Loading…'}</strong></span></div></section>;
 }
 
 function Projection() {
@@ -39,6 +44,7 @@ function Recommendations({ full = false }: { full?: boolean }) {
 
 export function StrategyScreen() {
   const [tab, setTab] = useState<StrategyTab>("overview");
+  const { policy } = useActivePolicy();
   const tabs: StrategyTab[] = ["overview", "recommendations", "opportunities", "risk", "scenarios"];
-  return <WealthShell active="strategy"><div className="wb-strategy-screen"><header className="wb-strategy-heading"><div><h1>Your strategy</h1><p>A personalised plan for long-term wealth.</p></div><button type="button">Edit policy</button></header><nav className="wb-strategy-tabs" aria-label="Strategy view">{tabs.map((item) => <button type="button" key={item} className={tab === item ? "active" : ""} aria-current={tab === item ? "page" : undefined} onClick={() => setTab(item)}>{(item[0] ?? "").toUpperCase() + item.slice(1)}</button>)}</nav><div className={`wb-strategy-overview ${tab === "overview" ? "visible" : ""}`}><div className="wb-overview-top"><OnTrack/><Goal/></div><PolicyMetrics/><MobilePolicySummary/><div className="wb-overview-bottom"><Projection/><Recommendations/></div></div>{tab === "recommendations" && <div className="wb-strategy-tab-panel"><Recommendations full/></div>}{tab !== "overview" && tab !== "recommendations" && <div className="wb-strategy-tab-panel"><Projection/><Recommendations/></div>}<div className="wb-screen-chat"><WealthChat mobile/></div></div></WealthShell>;
+  return <WealthShell active="strategy"><div className="wb-strategy-screen"><header className="wb-strategy-heading"><div><h1>Your strategy</h1><p>A personalised plan for long-term wealth.</p></div><Link href="/chat">Change in chat</Link></header><nav className="wb-strategy-tabs" aria-label="Strategy view">{tabs.map((item) => <button type="button" key={item} className={tab === item ? "active" : ""} aria-current={tab === item ? "page" : undefined} onClick={() => setTab(item)}>{(item[0] ?? "").toUpperCase() + item.slice(1)}</button>)}</nav><div className={`wb-strategy-overview ${tab === "overview" ? "visible" : ""}`}><div className="wb-overview-top"><OnTrack/><Goal/></div><PolicyMetrics policy={policy}/><MobilePolicySummary policy={policy}/><PolicyDetails policy={policy}/><div className="wb-overview-bottom"><Projection/><Recommendations/></div></div>{tab === "recommendations" && <div className="wb-strategy-tab-panel"><Recommendations full/></div>}{tab !== "overview" && tab !== "recommendations" && <div className="wb-strategy-tab-panel"><Projection/><Recommendations/></div>}<div className="wb-screen-chat"><WealthChat mobile/></div></div></WealthShell>;
 }
