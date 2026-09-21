@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { applyChatPolicyChange, policyReservePercent } from '@/application/chat-policy-service';
 import { devChatContextStore } from '@/infrastructure/dev/chat-context-store';
+import { devActivityStore } from '@/infrastructure/dev/dev-activity-store';
 
 export const runtime = 'nodejs';
 
@@ -10,6 +11,7 @@ const requestSchema = z.object({
   minimumLiquidStableReserveBps: z.number().int().min(0).max(10_000),
 }).strict();
 const contextStore = devChatContextStore();
+const activityStore = devActivityStore();
 
 export async function POST(request: Request) {
   const parsed = requestSchema.safeParse(await request.json().catch(() => null));
@@ -18,6 +20,12 @@ export async function POST(request: Request) {
   try {
     const context = await contextStore.load();
     const policy = await applyChatPolicyChange(contextStore, context, parsed.data);
+    activityStore.record({
+      kind: 'POLICY_UPDATED',
+      title: `Updated liquid reserve to ${policyReservePercent(policy)}%`,
+      description: 'Your Wealth Policy now keeps this portion of your portfolio liquid.',
+      status: 'completed',
+    });
     return NextResponse.json({
       policy: {
         version: policy.version,
