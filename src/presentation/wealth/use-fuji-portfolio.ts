@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export type FujiPortfolioView = Readonly<{
   wallet: string;
@@ -21,25 +21,26 @@ export function useFujiPortfolio() {
   const [portfolio, setPortfolio] = useState<FujiPortfolioView | null>(null);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
-    let active = true;
+  const refresh = useCallback(() => {
     fetch('/api/portfolio/current', { cache: 'no-store' })
       .then(async (response) => {
         if (!response.ok) throw new Error('Fuji portfolio unavailable');
         return response.json() as Promise<FujiPortfolioView>;
       })
       .then((next) => {
-        if (active) setPortfolio(next);
+        setPortfolio(next);
+        setError(false);
       })
-      .catch(() => {
-        if (active) setError(true);
-      });
-    return () => {
-      active = false;
-    };
+      .catch(() => setError(true));
   }, []);
 
-  return { portfolio, error };
+  useEffect(() => {
+    refresh();
+    window.addEventListener('wealthbuilder-portfolio-updated', refresh);
+    return () => window.removeEventListener('wealthbuilder-portfolio-updated', refresh);
+  }, [refresh]);
+
+  return { portfolio, error, refresh };
 }
 
 export function formatUsd(micros: string) {

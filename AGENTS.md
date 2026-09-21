@@ -178,3 +178,34 @@ pnpm typecheck
 pnpm lint
 pnpm test
 pnpm build
+```
+
+## DESIGN REFERENCES
+
+All approved visual references for WealthBuilder live in:
+
+/public/designs
+
+Always check that directory first before implementing or changing UI.
+
+Treat those designs as the canonical visual reference for:
+- layout
+- spacing
+- hierarchy
+- component styling
+- states
+- responsive behavior
+
+If a referenced asset is missing, use the closest clean implementation and add a TODO rather than inventing a new visual direction.
+
+## AI Chat Response Design
+
+For work in `presentation/chat`, use the reusable response system in
+`presentation/chat/responses/`; do not add one-off response layouts to `ChatScreen`.
+
+- Normal assistant conversation uses a compact bubble, not a card.
+- Structured portfolio, policy, action, execution, and failure information uses the matching response card.
+- Show the answer first, the reason second, and the next action third. Keep copy short and avoid duplicated plan text.
+- Policy decisions are integrated into action cards: green for allowed, amber for approval required, and red for blocked. Blocked actions show violated rules and a Review policy action only; never show execution controls or steps.
+- Use active policy, portfolio, deterministic policy-decision, and execution data. Keep chain implementation details, raw addresses, and raw errors out of normal UX; technical execution information belongs under expandable details.
+- Follow `/public/designs/WB_AIChat_designs*` for dark premium surfaces, subtle accents, Lucide icons, and responsive card treatment.

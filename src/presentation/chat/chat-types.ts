@@ -12,6 +12,8 @@ export type PolicyChangeView = Readonly<{
   state?: 'applied';
 }>;
 
+export type ChatResponseKind = 'conversation' | 'insight' | 'policy-summary';
+
 export type ChatMessageView = ChatMessage &
   Readonly<{
     id: string;
@@ -19,6 +21,7 @@ export type ChatMessageView = ChatMessage &
     evaluations?: readonly PlanPolicyEvaluation[];
     executions?: Readonly<Record<number, PlanExecution>>;
     policyChange?: PolicyChangeView;
+    responseKind?: ChatResponseKind;
   }>;
 
 export type ChatModel = Readonly<{ id: string; label: string }>;

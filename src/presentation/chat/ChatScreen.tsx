@@ -6,16 +6,19 @@ import type { ActionPlan } from '@/domain';
 import { useSmartAccount } from '@/application/interfaces/smart-account';
 import { WealthBuilderAccountControl } from '@/presentation/account/WealthBuilderAccountControl';
 import { DevUserSwitcher } from '@/presentation/dev/DevUserSwitcher';
-import type {
-  PlanExecution,
-  PlanExecutionAuthority,
-  PlanPolicyEvaluation,
-} from '../planning/ExecutionPlan';
-import '../planning/planning.css';
+import { useActivePolicy } from '@/presentation/wealth/use-active-policy';
+import { useFujiPortfolio } from '@/presentation/wealth/use-fuji-portfolio';
+import type { PlanExecution, PlanPolicyEvaluation } from '../planning/ExecutionPlan';
 import { ChatComposer } from './ChatComposer';
 import { ChatMenu, ChatThread, ChatWelcome } from './ChatMessages';
 import { ChatBottomNavigation, ChatMobileBrand, ChatSidebar } from './ChatNavigation';
-import type { ChatMessageView, ChatModel, ChatState, PolicyChangeView } from './chat-types';
+import type {
+  ChatMessageView,
+  ChatModel,
+  ChatResponseKind,
+  ChatState,
+  PolicyChangeView,
+} from './chat-types';
 import './chat.css';
 
 const validStates: readonly ChatState[] = [
@@ -35,6 +38,15 @@ type ChatResponse = Readonly<{
   error?: string;
 }>;
 
+function responseKindFor(request: string, response: ChatResponse): ChatResponseKind {
+  if (response.plan || response.policyChange) return 'conversation';
+  if (/\b(wealth )?policy\b|\brisk\b|\bliquid reserve\b/i.test(request)) return 'policy-summary';
+  if (/\bportfolio\b|\bperformance\b|\bbalances?\b|\bliquid\b|\bdeployed\b/i.test(request)) {
+    return 'insight';
+  }
+  return 'conversation';
+}
+
 export function ChatScreen() {
   const [state, setState] = useState<ChatState>('empty');
   const [input, setInput] = useState('');
@@ -45,7 +57,9 @@ export function ChatScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [policySavingId, setPolicySavingId] = useState<string | null>(null);
-  const { smartAccountAddress, permission, grantAaveUsdcSupplyPermission } = useSmartAccount();
+  const { smartAccountAddress, grantAaveUsdcSupplyPermission } = useSmartAccount();
+  const { policy } = useActivePolicy();
+  const { portfolio } = useFujiPortfolio();
 
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get('state');
@@ -125,6 +139,7 @@ export function ChatScreen() {
         content: result.message ?? 'I could not produce a response.',
         ...(result.plan ? { plan: result.plan, evaluations: result.evaluations ?? [] } : {}),
         ...(result.policyChange ? { policyChange: result.policyChange } : {}),
+        responseKind: responseKindFor(text, result),
       };
       setMessages([...nextMessages, assistantMessage]);
       show(result.plan ? 'action' : 'response');
@@ -272,6 +287,9 @@ export function ChatScreen() {
         ...(payload.result.portfolio ? { portfolio: payload.result.portfolio } : {}),
       };
       window.dispatchEvent(new Event('wealthbuilder-activity-updated'));
+      if (payload.result.state === 'CONFIRMED') {
+        window.dispatchEvent(new Event('wealthbuilder-portfolio-updated'));
+      }
 
       setMessages((current) => {
         const updated = current.map((message) =>
@@ -282,18 +300,7 @@ export function ChatScreen() {
               }
             : message,
         );
-        if (payload.result?.state !== 'CONFIRMED') return updated;
-
-        const completedAction = current.find((message) => message.id === messageId)?.plan
-          ?.proposedActions[evaluation.actionIndex];
-        return [
-          ...updated,
-          {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: `Confirmed: supplied ${completedAction?.amount ?? ''} ${completedAction?.asset.toUpperCase() ?? ''} to ${completedAction?.protocol ?? 'Aave V3'} through your WealthBuilder Account. Your portfolio context has been refreshed.`,
-          },
-        ];
+        return updated;
       });
     } catch (requestError) {
       const retryable =
@@ -302,10 +309,7 @@ export function ChatScreen() {
         Boolean((requestError as Error & { retryable?: boolean }).retryable);
       updateExecution({
         status: 'failed',
-        failureReason:
-          requestError instanceof Error
-            ? requestError.message
-            : 'Your account could not complete this action.',
+        failureReason: 'We couldn’t complete this action. Your portfolio was not changed.',
         ...(retryable ? { retryable: true } : {}),
       });
     }
@@ -315,12 +319,6 @@ export function ChatScreen() {
   const isMenu = state === 'menu';
   const isAttach = state === 'attach';
   const hasConversation = messages.length > 0 || loading || isAttach;
-  const authority: PlanExecutionAuthority = {
-    status: permission ? 'active' : smartAccountAddress ? 'ready' : 'not_ready',
-    ...(smartAccountAddress ? { smartAccountAddress } : {}),
-    ...(permission?.expiresAt ? { expiresAt: permission.expiresAt } : {}),
-  };
-
   return (
     <div className="ai-chat-page">
       <ChatSidebar />
@@ -355,8 +353,9 @@ export function ChatScreen() {
               error={error}
               isAttach={isAttach}
               usePortfolio={usePortfolio}
+              policy={policy}
+              portfolio={portfolio}
               policySavingId={policySavingId}
-              authority={authority}
               onApplyPolicyChange={(message) => void applyPolicyChange(message)}
               onCancelPolicyChange={cancelPolicyChange}
               onExecute={(messageId, evaluation) => void executeAction(messageId, evaluation)}

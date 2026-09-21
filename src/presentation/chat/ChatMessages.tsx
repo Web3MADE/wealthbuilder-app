@@ -1,7 +1,16 @@
 import { Clock3, MessageCircle, MoreHorizontal, Paperclip, PieChart, Settings } from 'lucide-react';
-import type { PlanExecutionAuthority, PlanPolicyEvaluation } from '../planning/ExecutionPlan';
-import { ExecutionPlan } from '../planning/ExecutionPlan';
-import type { ChatMessageView, PolicyChangeView } from './chat-types';
+import type { PlanPolicyEvaluation } from '../planning/ExecutionPlan';
+import type { ChatMessageView } from './chat-types';
+import type { ActivePolicyView } from '../wealth/use-active-policy';
+import type { FujiPortfolioView } from '../wealth/use-fuji-portfolio';
+import { ActionCard } from './responses/ActionCard';
+import { ConversationalResponse } from './responses/ConversationalResponse';
+import { ExecutionFailure } from './responses/ExecutionFailure';
+import { ExecutionLifecycle } from './responses/ExecutionLifecycle';
+import { ExecutionSuccess } from './responses/ExecutionSuccess';
+import { InsightCard } from './responses/InsightCard';
+import { PolicyChangeCard } from './responses/PolicyChangeCard';
+import { PolicySummaryCard } from './responses/PolicySummaryCard';
 
 function Avatar() {
   return (
@@ -11,65 +20,15 @@ function Avatar() {
   );
 }
 
-function policyStatus(evaluations: readonly PlanPolicyEvaluation[]) {
-  if (evaluations.some((evaluation) => evaluation.outcome === 'BLOCKED')) return 'blocked' as const;
-  if (evaluations.some((evaluation) => evaluation.outcome === 'REQUIRES_APPROVAL')) {
-    return 'ready' as const;
-  }
-  if (evaluations.some((evaluation) => evaluation.outcome === 'AUTONOMOUS_ALLOWED')) {
-    return 'allowed' as const;
-  }
-  return 'proposed' as const;
-}
-
-function PolicyChangeCard({
-  change,
-  pending,
-  onApply,
-  onCancel,
-}: {
-  change: PolicyChangeView;
-  pending: boolean;
-  onApply: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <section className="chat-policy-change" aria-label="Policy change proposal">
-      <small>POLICY CHANGE</small>
-      <strong>Minimum liquid reserve</strong>
-      <p>
-        <span>Current</span>
-        {change.currentMinimumLiquidStableReservePercent}% <b>→</b> <span>Proposed</span>
-        {change.proposedMinimumLiquidStableReservePercent}%
-      </p>
-      <span className="chat-policy-effect">
-        WealthBuilder will keep at least {change.proposedMinimumLiquidStableReservePercent}% of your
-        portfolio liquid before allowing an action.
-      </span>
-      {change.state === 'applied' ? (
-        <em>Your Wealth Policy has been updated.</em>
-      ) : (
-        <div>
-          <button type="button" onClick={onApply} disabled={pending}>
-            {pending ? 'Applying…' : 'Apply change'}
-          </button>
-          <button type="button" onClick={onCancel} disabled={pending}>
-            Cancel
-          </button>
-        </div>
-      )}
-    </section>
-  );
-}
-
 export function ChatThread({
   messages,
   loading,
   error,
   isAttach,
   usePortfolio,
+  policy,
+  portfolio,
   policySavingId,
-  authority,
   onApplyPolicyChange,
   onCancelPolicyChange,
   onExecute,
@@ -79,8 +38,9 @@ export function ChatThread({
   error: string;
   isAttach: boolean;
   usePortfolio: boolean;
+  policy: ActivePolicyView | null;
+  portfolio: FujiPortfolioView | null;
   policySavingId: string | null;
-  authority: PlanExecutionAuthority;
   onApplyPolicyChange: (message: ChatMessageView) => void;
   onCancelPolicyChange: (messageId: string) => void;
   onExecute: (messageId: string, evaluation: PlanPolicyEvaluation) => void;
@@ -97,30 +57,64 @@ export function ChatThread({
           );
         }
 
-        const evaluations = message.evaluations ?? [];
         return (
           <div className="chat-assistant-message" key={message.id}>
             <div className="chat-reply-row">
               <Avatar />
-              <div className="chat-reply-card">
-                <p>{message.content}</p>
-              </div>
+              <ConversationalResponse content={message.content} />
             </div>
-            {message.plan && (
-              <div className="chat-structured-plan">
-                <ExecutionPlan
-                  plan={message.plan}
-                  status={policyStatus(evaluations)}
-                  evaluations={evaluations}
-                  executions={message.executions ?? {}}
-                  authority={authority}
-                  onExecute={(evaluation) => onExecute(message.id, evaluation)}
-                  onRetry={(evaluation) => onExecute(message.id, evaluation)}
-                />
+            {message.responseKind === 'insight' && portfolio && (
+              <div className="chat-structured-response">
+                <InsightCard portfolio={portfolio} interpretation={message.content} />
               </div>
             )}
+            {message.responseKind === 'policy-summary' && policy && (
+              <div className="chat-structured-response">
+                <PolicySummaryCard policy={policy} />
+              </div>
+            )}
+            {message.plan &&
+              message.evaluations?.map((evaluation) => {
+                const action = message.plan?.proposedActions[evaluation.actionIndex];
+                if (!action) return null;
+                const execution = message.executions?.[evaluation.actionIndex];
+                if (execution?.status === 'completed') {
+                  return (
+                    <div className="chat-structured-response" key={evaluation.actionIndex}>
+                      <ExecutionSuccess action={action} execution={execution} />
+                    </div>
+                  );
+                }
+                if (execution?.status === 'failed') {
+                  return (
+                    <div className="chat-structured-response" key={evaluation.actionIndex}>
+                      <ExecutionFailure
+                        execution={execution}
+                        onRetry={() => onExecute(message.id, evaluation)}
+                      />
+                    </div>
+                  );
+                }
+                if (execution) {
+                  return (
+                    <div className="chat-structured-response" key={evaluation.actionIndex}>
+                      <ExecutionLifecycle action={action} execution={execution} />
+                    </div>
+                  );
+                }
+                return (
+                  <div className="chat-structured-response" key={evaluation.actionIndex}>
+                    <ActionCard
+                      action={action}
+                      plan={message.plan}
+                      evaluation={evaluation}
+                      onExecute={() => onExecute(message.id, evaluation)}
+                    />
+                  </div>
+                );
+              })}
             {message.policyChange && (
-              <div className="chat-structured-plan">
+              <div className="chat-structured-response">
                 <PolicyChangeCard
                   change={message.policyChange}
                   pending={policySavingId === message.id}
