@@ -6,10 +6,12 @@ import { devActivityStore } from '@/infrastructure/dev/dev-activity-store';
 
 export const runtime = 'nodejs';
 
-const requestSchema = z.object({
-  type: z.literal('SET_MINIMUM_LIQUID_STABLE_RESERVE'),
-  minimumLiquidStableReserveBps: z.number().int().min(0).max(10_000),
-}).strict();
+const requestSchema = z
+  .object({
+    type: z.literal('SET_MINIMUM_LIQUID_STABLE_RESERVE'),
+    minimumLiquidStableReserveBps: z.number().int().min(0).max(10_000),
+  })
+  .strict();
 const contextStore = devChatContextStore();
 const activityStore = devActivityStore();
 
@@ -33,6 +35,9 @@ export async function POST(request: Request) {
       },
     });
   } catch {
-    return NextResponse.json({ error: 'Could not apply the proposed policy change.' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Could not apply the proposed policy change.' },
+      { status: 400 },
+    );
   }
 }

@@ -6,6 +6,12 @@ export const runtime = 'nodejs';
 
 export async function GET() {
   const config = zeroDevServerConfig();
-  if (!config) return NextResponse.json({ error: 'ZeroDev development configuration is unavailable.' }, { status: 404 });
-  return NextResponse.json({ smartAccountAddress: await new ZeroDevKernelSessionManager(config).smartAccountAddress() });
+  if (!config)
+    return NextResponse.json(
+      { error: 'ZeroDev development configuration is unavailable.' },
+      { status: 404 },
+    );
+  return NextResponse.json({
+    smartAccountAddress: await new ZeroDevKernelSessionManager(config).smartAccountAddress(),
+  });
 }

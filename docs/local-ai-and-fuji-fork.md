@@ -48,7 +48,13 @@ Example validated output:
     "Confirm resulting position"
   ],
   "proposedActions": [
-    { "type": "SUPPLY", "asset": "usdc", "amount": "10", "protocol": "aave-v3", "chain": "avalanche-fuji" }
+    {
+      "type": "SUPPLY",
+      "asset": "usdc",
+      "amount": "10",
+      "protocol": "aave-v3",
+      "chain": "avalanche-fuji"
+    }
   ]
 }
 ```

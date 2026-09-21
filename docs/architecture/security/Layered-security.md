@@ -1,12 +1,15 @@
 # ADR-009: Layered Security and Bounded Authority
 
 ## Status
+
 Accepted
 
 ## Context
+
 WealthBuilder must support automated onchain actions while preserving self-custody and preventing AI, integrations, or compromised sessions from gaining unrestricted control over user funds.
 
 ## Decision
+
 Use layered authority:
 
 User Root Authority  
@@ -33,7 +36,9 @@ Security controls:
 13. **Permission UX must be transparent.** Users should always be able to see exactly what AI is currently allowed to do with their funds.
 
 ## Consequences
+
 This preserves user control while reducing risks from compromised permissions, unsafe automation, human error, and excessive access.
 
 ## Deferred
+
 Recovery architecture, advanced circuit breakers, automated protocol-risk scoring, and protected-vs-active capital separation are deferred until needed.

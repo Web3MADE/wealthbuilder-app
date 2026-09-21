@@ -1,4 +1,9 @@
-import { type AssetRef, type PersonalWealthPolicy, type PolicySettings, type Portfolio } from '@/domain';
+import {
+  type AssetRef,
+  type PersonalWealthPolicy,
+  type PolicySettings,
+  type Portfolio,
+} from '@/domain';
 import type { ChatContextPort } from '@/application/interfaces/chat-context';
 import { fujiKernelAccount, fujiPortfolioSource } from './fuji-portfolio-source';
 import { devPersonalWealthPolicyStore } from './dev-policy-store';
@@ -16,13 +21,21 @@ export class DevChatContextStore implements ChatContextPort {
   async load(walletOverride?: string) {
     const now = new Date();
     const portfolio = await fujiPortfolioSource().refresh(walletOverride ?? walletId);
-    const policy = devPersonalWealthPolicyStore().load(walletOverride?.toLowerCase() ?? walletId, now);
+    const policy = devPersonalWealthPolicyStore().load(
+      walletOverride?.toLowerCase() ?? walletId,
+      now,
+    );
     const contextWalletId = walletOverride?.toLowerCase() ?? policy.walletId;
     return {
       portfolio: { ...portfolio, walletId: contextWalletId },
       policy: { ...policy, walletId: contextWalletId },
       quotes: [
-        { assetId: 'usdc', priceMicrosPerUnit: 1_000_000n, quotedAt: now, expiresAt: portfolio.expiresAt },
+        {
+          assetId: 'usdc',
+          priceMicrosPerUnit: 1_000_000n,
+          quotedAt: now,
+          expiresAt: portfolio.expiresAt,
+        },
       ],
       supportedAssets: assets,
       supportedActionTypes: ['SUPPLY'] as const,

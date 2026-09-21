@@ -28,17 +28,27 @@ export function useFujiPortfolio() {
         if (!response.ok) throw new Error('Fuji portfolio unavailable');
         return response.json() as Promise<FujiPortfolioView>;
       })
-      .then((next) => { if (active) setPortfolio(next); })
-      .catch(() => { if (active) setError(true); });
-    return () => { active = false; };
+      .then((next) => {
+        if (active) setPortfolio(next);
+      })
+      .catch(() => {
+        if (active) setError(true);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   return { portfolio, error };
 }
 
 export function formatUsd(micros: string) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    .format(Number(BigInt(micros)) / 1_000_000);
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(BigInt(micros)) / 1_000_000);
 }
 
 export function formatToken(amountAtomic: string, decimals: number) {

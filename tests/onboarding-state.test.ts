@@ -8,8 +8,17 @@ describe('onboarding view state', () => {
     expect(canContinue(1, goal)).toBe(true);
     expect(canContinue(2, { ...goal, horizon: '10+ years' })).toBe(false);
     expect(canContinue(2, { ...goal, horizon: '10+ years', risk: 'Moderate' })).toBe(true);
-    expect(canContinue(3, { ...goal, asset: 'BTC / ETH focused', liquidity: 'Balanced' })).toBe(false);
-    expect(canContinue(3, { ...goal, asset: 'BTC / ETH focused', liquidity: 'Balanced', ai: 'Prepare and I approve' })).toBe(true);
+    expect(canContinue(3, { ...goal, asset: 'BTC / ETH focused', liquidity: 'Balanced' })).toBe(
+      false,
+    );
+    expect(
+      canContinue(3, {
+        ...goal,
+        asset: 'BTC / ETH focused',
+        liquidity: 'Balanced',
+        ai: 'Prepare and I approve',
+      }),
+    ).toBe(true);
   });
 
   it('reaches completion and returns edits to review', () => {

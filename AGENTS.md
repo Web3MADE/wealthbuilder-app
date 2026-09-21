@@ -119,6 +119,37 @@ Group related behavior into cohesive modules.
 
 Do not refactor unrelated code during a feature task unless necessary.
 
+### Code readability and formatting
+
+- All touched code must be formatted before completion.
+- Run the project formatter/Prettier on touched files.
+- Never leave dense one-line JSX, compressed handlers, or hard-to-scan component markup.
+- JSX must be vertically formatted and readable.
+- Use consistent imports, quotes, spacing, and line breaks.
+- Code-review readability is mandatory.
+
+### Component structure
+
+- Screens should compose focused components rather than contain the entire UI in one file.
+- Extract sections when they have their own state, logic, or substantial markup.
+- Avoid large files containing unrelated UI responsibilities.
+- Prefer small named components over large inline JSX blocks.
+- Do not over-fragment trivial markup into meaningless components.
+
+### Icons and SVGs
+
+- Use Lucide icons for standard UI icons wherever possible.
+- Do not maintain large inline SVG-path maps inside feature components.
+- Custom SVGs should live in a dedicated icon or illustration component, or in `/public/assets` when static.
+- Complex charts and illustrations should be their own component, not embedded inside a screen component.
+- Inline SVG is acceptable only for genuinely small, unique UI graphics where extraction would reduce clarity.
+
+### Refactoring
+
+- Refactors must preserve current behavior and UX unless the task explicitly requests a product change.
+- Keep development tooling intact.
+- Do not mix architecture changes into readability refactors.
+
 ---
 
 ## Changes Requiring Approval

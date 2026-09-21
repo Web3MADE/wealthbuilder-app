@@ -12,7 +12,10 @@ export function useDevActivity() {
         if (!response.ok) throw new Error('Activity unavailable');
         return response.json() as Promise<{ items: readonly DevActivity[] }>;
       })
-      .then((next) => { setItems(next.items); setError(false); })
+      .then((next) => {
+        setItems(next.items);
+        setError(false);
+      })
       .catch(() => setError(true));
   }, []);
 

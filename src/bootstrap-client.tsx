@@ -6,7 +6,11 @@ import { useWalletConnection } from '@/infrastructure/wallet/use-wallet-connecti
 import { ZeroDevSmartAccountProvider } from '@/infrastructure/zerodev/zerodev-smart-account-provider';
 
 export function WalletProviders({ children }: { children: React.ReactNode }) {
-  return <WalletProviderBase><ZeroDevSmartAccountProvider>{children}</ZeroDevSmartAccountProvider></WalletProviderBase>;
+  return (
+    <WalletProviderBase>
+      <ZeroDevSmartAccountProvider>{children}</ZeroDevSmartAccountProvider>
+    </WalletProviderBase>
+  );
 }
 
 export function ProductPage({ view }: { view: 'home' | 'portfolio' | 'policy' }) {

@@ -22,7 +22,10 @@ export function useActivePolicy() {
         if (!response.ok) throw new Error('Active policy unavailable');
         return response.json() as Promise<ActivePolicyView>;
       })
-      .then((next) => { setPolicy(next); setError(false); })
+      .then((next) => {
+        setPolicy(next);
+        setError(false);
+      })
       .catch(() => setError(true));
   }, []);
 
@@ -36,5 +39,9 @@ export function useActivePolicy() {
 }
 
 export function formatPolicyUsd(value: string) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value));
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(Number(value));
 }

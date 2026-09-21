@@ -15,9 +15,14 @@ export type JawPermissionState = Readonly<{
 async function browserConfig() {
   const configuredApiKey = process.env.NEXT_PUBLIC_JAW_API_KEY;
   const configuredDelegate = process.env.NEXT_PUBLIC_JAW_DELEGATE_ADDRESS as Address | undefined;
-  if (configuredApiKey && configuredDelegate) return { apiKey: configuredApiKey, delegateAddress: configuredDelegate };
+  if (configuredApiKey && configuredDelegate)
+    return { apiKey: configuredApiKey, delegateAddress: configuredDelegate };
   const response = await fetch('/api/jaw/config');
-  const payload = await response.json() as { apiKey?: string; delegateAddress?: Address; error?: string };
+  const payload = (await response.json()) as {
+    apiKey?: string;
+    delegateAddress?: Address;
+    error?: string;
+  };
   if (!response.ok || !payload.apiKey || !payload.delegateAddress)
     throw new Error(payload.error ?? 'JAW is not configured.');
   return { apiKey: payload.apiKey, delegateAddress: payload.delegateAddress };
@@ -50,7 +55,10 @@ export class JawAavePermissionClient {
     return this.account.getAddress();
   }
 
-  async grantAaveUsdcSupplyPermission(amountUsdc: string, expirySeconds = 60 * 30): Promise<JawPermissionState> {
+  async grantAaveUsdcSupplyPermission(
+    amountUsdc: string,
+    expirySeconds = 60 * 30,
+  ): Promise<JawPermissionState> {
     const { delegateAddress } = await browserConfig();
     const smartAccountAddress = await this.createOrLoad();
     const amount = parseUnits(amountUsdc, 6);

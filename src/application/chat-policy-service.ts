@@ -74,11 +74,11 @@ export function evaluateChatPlan(
     return {
       actionIndex,
       action,
-      decision: policyService.evaluateAction(
-      context.policy,
-      action,
-      { now, portfolio: context.portfolio, quotes: context.quotes },
-      ),
+      decision: policyService.evaluateAction(context.policy, action, {
+        now,
+        portfolio: context.portfolio,
+        quotes: context.quotes,
+      }),
     };
   });
 }

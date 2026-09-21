@@ -18,7 +18,11 @@ export class PlanningError extends Error {
     public readonly code: 'PROVIDER_ERROR' | 'INVALID_PLAN',
     public readonly metadata: PlannerMetadata,
   ) {
-    super(code === 'INVALID_PLAN' ? 'The AI returned an invalid action plan.' : 'The AI provider is unavailable.');
+    super(
+      code === 'INVALID_PLAN'
+        ? 'The AI returned an invalid action plan.'
+        : 'The AI provider is unavailable.',
+    );
   }
 }
 

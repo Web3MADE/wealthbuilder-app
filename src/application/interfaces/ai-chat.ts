@@ -1,10 +1,4 @@
-import type {
-  ActionPlan,
-  AssetRef,
-  PersonalWealthPolicy,
-  Portfolio,
-  PriceQuote,
-} from '@/domain';
+import type { ActionPlan, AssetRef, PersonalWealthPolicy, Portfolio, PriceQuote } from '@/domain';
 import type { PlannerMetadata } from './ai-planner';
 
 export type ChatMessage = Readonly<{
@@ -34,8 +28,10 @@ export type ChatResult = Readonly<{
 }>;
 
 export interface AIChatPort {
-  generateChat(input: Readonly<{
-    messages: readonly ChatMessage[];
-    context?: AIChatContext;
-  }>): Promise<ChatResult>;
+  generateChat(
+    input: Readonly<{
+      messages: readonly ChatMessage[];
+      context?: AIChatContext;
+    }>,
+  ): Promise<ChatResult>;
 }

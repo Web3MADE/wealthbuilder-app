@@ -18,7 +18,10 @@ export class JawHeadlessRoot {
     return (await this.root()).getAddress();
   }
 
-  async grantAaveUsdcSupplyPermission(amountUsdc: string, expirySeconds = 60 * 30): Promise<HeadlessJawPermission> {
+  async grantAaveUsdcSupplyPermission(
+    amountUsdc: string,
+    expirySeconds = 60 * 30,
+  ): Promise<HeadlessJawPermission> {
     const amount = parseUnits(amountUsdc, 6);
     if (amount <= 0n) throw new Error('A positive USDC amount is required.');
     const root = await this.root();

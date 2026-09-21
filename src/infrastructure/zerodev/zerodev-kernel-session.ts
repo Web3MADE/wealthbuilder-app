@@ -1,6 +1,15 @@
 import { signerToEcdsaValidator } from '@zerodev/ecdsa-validator';
-import { deserializePermissionAccount, serializePermissionAccount, toPermissionValidator } from '@zerodev/permissions';
-import { CallPolicyVersion, ParamCondition, toCallPolicy, toTimestampPolicy } from '@zerodev/permissions/policies';
+import {
+  deserializePermissionAccount,
+  serializePermissionAccount,
+  toPermissionValidator,
+} from '@zerodev/permissions';
+import {
+  CallPolicyVersion,
+  ParamCondition,
+  toCallPolicy,
+  toTimestampPolicy,
+} from '@zerodev/permissions/policies';
 import { toECDSASigner } from '@zerodev/permissions/signers';
 import { createKernelAccount } from '@zerodev/sdk';
 import { getEntryPoint, KERNEL_V3_1 } from '@zerodev/sdk/constants';
@@ -11,8 +20,32 @@ import { aaveV3Fuji } from '@/config';
 import type { ZeroDevServerConfig } from './zerodev-server-config';
 
 const entryPoint = getEntryPoint('0.7');
-const erc20Abi = [{ type: 'function', name: 'approve', stateMutability: 'nonpayable', inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ type: 'bool' }] }] as const;
-const poolAbi = [{ type: 'function', name: 'supply', stateMutability: 'nonpayable', inputs: [{ name: 'asset', type: 'address' }, { name: 'amount', type: 'uint256' }, { name: 'onBehalfOf', type: 'address' }, { name: 'referralCode', type: 'uint16' }], outputs: [] }] as const;
+const erc20Abi = [
+  {
+    type: 'function',
+    name: 'approve',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ type: 'bool' }],
+  },
+] as const;
+const poolAbi = [
+  {
+    type: 'function',
+    name: 'supply',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'asset', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+      { name: 'onBehalfOf', type: 'address' },
+      { name: 'referralCode', type: 'uint16' },
+    ],
+    outputs: [],
+  },
+] as const;
 
 export type ZeroDevSession = Readonly<{
   smartAccountAddress: Address;
@@ -28,7 +61,10 @@ export class ZeroDevKernelSessionManager {
   private readonly agent;
 
   constructor(private readonly config: ZeroDevServerConfig) {
-    this.publicClient = createPublicClient({ chain: avalancheFuji, transport: http(config.rpcUrl) });
+    this.publicClient = createPublicClient({
+      chain: avalancheFuji,
+      transport: http(config.rpcUrl),
+    });
     this.owner = privateKeyToAccount(config.ownerPrivateKey);
     this.agent = privateKeyToAccount(config.agentPrivateKey);
   }
@@ -51,14 +87,18 @@ export class ZeroDevKernelSessionManager {
           policyVersion: CallPolicyVersion.V0_0_4,
           permissions: [
             {
-              target: aaveV3Fuji.assets.usdc!, abi: erc20Abi, functionName: 'approve',
+              target: aaveV3Fuji.assets.usdc!,
+              abi: erc20Abi,
+              functionName: 'approve',
               args: [
                 { condition: ParamCondition.EQUAL, value: aaveV3Fuji.poolAddress },
                 { condition: ParamCondition.LESS_THAN_OR_EQUAL, value: amount },
               ],
             },
             {
-              target: aaveV3Fuji.poolAddress, abi: poolAbi, functionName: 'supply',
+              target: aaveV3Fuji.poolAddress,
+              abi: poolAbi,
+              functionName: 'supply',
               args: [
                 { condition: ParamCondition.EQUAL, value: aaveV3Fuji.assets.usdc! },
                 { condition: ParamCondition.LESS_THAN_OR_EQUAL, value: amount },
@@ -80,20 +120,36 @@ export class ZeroDevKernelSessionManager {
     return {
       smartAccountAddress: ownerAccount.address,
       agentAddress: this.agent.address,
-      serializedPermissionAccount: await serializePermissionAccount(permissionAccount, this.config.agentPrivateKey),
+      serializedPermissionAccount: await serializePermissionAccount(
+        permissionAccount,
+        this.config.agentPrivateKey,
+      ),
       expiresAt: new Date(expiresAt * 1000).toISOString(),
     };
   }
 
   async loadSession(serializedPermissionAccount: string) {
-    return deserializePermissionAccount(this.publicClient, entryPoint, KERNEL_V3_1, serializedPermissionAccount);
+    return deserializePermissionAccount(
+      this.publicClient,
+      entryPoint,
+      KERNEL_V3_1,
+      serializedPermissionAccount,
+    );
   }
 
   private async sudoValidator() {
-    return signerToEcdsaValidator(this.publicClient, { signer: this.owner, entryPoint, kernelVersion: KERNEL_V3_1 });
+    return signerToEcdsaValidator(this.publicClient, {
+      signer: this.owner,
+      entryPoint,
+      kernelVersion: KERNEL_V3_1,
+    });
   }
 
   private async ownerAccount() {
-    return createKernelAccount(this.publicClient, { entryPoint, kernelVersion: KERNEL_V3_1, plugins: { sudo: await this.sudoValidator() } });
+    return createKernelAccount(this.publicClient, {
+      entryPoint,
+      kernelVersion: KERNEL_V3_1,
+      plugins: { sudo: await this.sudoValidator() },
+    });
   }
 }

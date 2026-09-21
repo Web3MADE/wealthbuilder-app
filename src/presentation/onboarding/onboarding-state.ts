@@ -7,7 +7,14 @@ export type Policy = {
   ai: string;
 };
 
-export const emptyPolicy: Policy = { goal: "", horizon: "", risk: "", asset: "", liquidity: "", ai: "" };
+export const emptyPolicy: Policy = {
+  goal: '',
+  horizon: '',
+  risk: '',
+  asset: '',
+  liquidity: '',
+  ai: '',
+};
 
 export function canContinue(step: number, policy: Policy): boolean {
   if (step === 1) return Boolean(policy.goal);

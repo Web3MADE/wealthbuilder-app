@@ -1,4 +1,5 @@
-export type DevActivityKind = 'POLICY_UPDATED' | 'ACTION_APPROVED' | 'ACTION_BLOCKED' | 'SUPPLY_CONFIRMED' | 'EXECUTION_FAILED';
+export type DevActivityKind =
+  'POLICY_UPDATED' | 'ACTION_APPROVED' | 'ACTION_BLOCKED' | 'SUPPLY_CONFIRMED' | 'EXECUTION_FAILED';
 
 export type DevActivity = Readonly<{
   id: string;

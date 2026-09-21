@@ -13,8 +13,12 @@ function storage() {
   const values = new Map<string, string>();
   return {
     getItem: (key: string) => values.get(key) ?? null,
-    setItem: (key: string, value: string) => { values.set(key, value); },
-    removeItem: (key: string) => { values.delete(key); },
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+    removeItem: (key: string) => {
+      values.delete(key);
+    },
   };
 }
 
@@ -39,7 +43,9 @@ describe('development personas', () => {
     resetDevState(store);
     expect(store.getItem(DEV_MODE_KEY)).toBeNull();
     expect(store.getItem(ONBOARDING_KEY)).toBeNull();
-    expect(routeForDevUser(resolveDevUserMode(null, store.getItem(DEV_MODE_KEY)))).toBe('/onboarding');
+    expect(routeForDevUser(resolveDevUserMode(null, store.getItem(DEV_MODE_KEY)))).toBe(
+      '/onboarding',
+    );
   });
 
   it('hides the switcher when disabled or in production', () => {

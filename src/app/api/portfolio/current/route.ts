@@ -6,7 +6,10 @@ export const runtime = 'nodejs';
 export async function GET() {
   try {
     const portfolio = await fujiPortfolioSource().refresh();
-    const totalUsdMicros = portfolio.positions.reduce((total, position) => total + position.value.micros, 0n);
+    const totalUsdMicros = portfolio.positions.reduce(
+      (total, position) => total + position.value.micros,
+      0n,
+    );
     return NextResponse.json({
       wallet: portfolio.walletId,
       capturedAt: portfolio.capturedAt.toISOString(),

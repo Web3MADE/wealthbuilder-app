@@ -13,7 +13,10 @@ export class DevChatExecutionStore {
 
   register(evaluations: readonly ChatActionEvaluation[]) {
     for (const evaluation of evaluations)
-      this.pending.set(evaluation.action.id, { action: evaluation.action, decision: evaluation.decision });
+      this.pending.set(evaluation.action.id, {
+        action: evaluation.action,
+        decision: evaluation.decision,
+      });
   }
 
   consume(actionId: string): PendingAction | null {
