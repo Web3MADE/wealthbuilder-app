@@ -9,11 +9,11 @@ import { chatWithAI } from '@/application/chat-service';
 import { PlanningError } from '@/application/interfaces/ai-planner';
 import { PolicyService } from '@/application/policy-service';
 import {
-  OpenCodeConfigSchema,
-  OpenCodeGoPlanner,
-  OpenCodeModelSchema,
-  openCodeChatCatalog,
-} from '@/infrastructure/ai/opencode-ai-planner';
+  AIProviderConfigurationError,
+  aiChatCatalog,
+  defaultChatModelId,
+  resolveAIChatModel,
+} from '@/infrastructure/ai/ai-model-catalog';
 import { devChatExecutionStore } from '@/infrastructure/dev/chat-execution-store';
 import { devChatContextStore } from '@/infrastructure/dev/chat-context-store';
 import { devActivityStore } from '@/infrastructure/dev/dev-activity-store';
@@ -62,7 +62,7 @@ function actionAmount(action: {
 }
 
 export function GET() {
-  return NextResponse.json(openCodeChatCatalog());
+  return NextResponse.json(aiChatCatalog());
 }
 
 export async function POST(request: Request) {
@@ -78,29 +78,10 @@ export async function POST(request: Request) {
       { error: 'Send a conversation with up to twenty messages.' },
       { status: 400 },
     );
-  const selectedModel = OpenCodeModelSchema.safeParse(parsed.data.model ?? 'gpt-5.6-luna');
-  if (!selectedModel.success || selectedModel.data === 'deepseek-v4-pro')
-    return NextResponse.json(
-      { error: 'Select one of the available OpenCode Go chat models.' },
-      { status: 400 },
-    );
-  const config = OpenCodeConfigSchema.safeParse({
-    baseUrl: process.env.OPENCODE_GO_BASE_URL || undefined,
-    apiKey: process.env.OPENCODE_API_KEY,
-    model: selectedModel.data,
-  });
-  if (!config.success)
-    return NextResponse.json(
-      { error: 'OpenCode is not configured. Set OPENCODE_API_KEY.' },
-      { status: 503 },
-    );
   try {
+    const planner = resolveAIChatModel(parsed.data.model ?? defaultChatModelId);
     const context = await contextStore.load(parsed.data.smartAccountAddress);
-    const result = await chatWithAI(
-      new OpenCodeGoPlanner(config.data),
-      parsed.data.messages,
-      context,
-    );
+    const result = await chatWithAI(planner, parsed.data.messages, context);
     const evaluatedActions = result.plan
       ? evaluateChatPlan(new PolicyService(), context, result.plan)
       : [];
@@ -149,6 +130,9 @@ export async function POST(request: Request) {
         : null,
     });
   } catch (error) {
+    if (error instanceof AIProviderConfigurationError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
     if (error instanceof PlanningError) {
       return NextResponse.json(
         { error: error.message, code: error.code },

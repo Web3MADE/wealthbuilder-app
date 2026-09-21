@@ -40,7 +40,7 @@ export function ChatScreen() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessageView[]>([]);
   const [models, setModels] = useState<ChatModel[]>([]);
-  const [model, setModel] = useState('gpt-5.6-luna');
+  const [model, setModel] = useState('groq-gpt-oss-120b');
   const [usePortfolio, setUsePortfolio] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -65,7 +65,7 @@ export function ChatScreen() {
         setModels(catalog.models);
         setModel(catalog.defaultModel);
       })
-      .catch(() => setError('Could not load OpenCode models.'));
+      .catch(() => setError('Could not load AI models.'));
   }, []);
 
   function show(next: ChatState) {

@@ -27,6 +27,7 @@ export const EnvironmentSchema = z.object({
   DATABASE_URL: z.string().url().optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
   AI_MODEL: z.string().min(1).default('gpt-4.1-mini'),
+  GROQ_API_KEY: z.string().min(1).optional(),
   FUJI_RPC_URL: z.string().url().default(fujiRpcUrl),
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
   NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: z.string().min(1).optional(),
