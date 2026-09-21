@@ -30,6 +30,10 @@ export const EnvironmentSchema = z.object({
   FUJI_RPC_URL: z.string().url().default(fujiRpcUrl),
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
   NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: z.string().min(1).optional(),
+  JAW_API_KEY: z.string().min(1).optional(),
+  NEXT_PUBLIC_JAW_API_KEY: z.string().min(1).optional(),
+  JAW_DELEGATE_PRIVATE_KEY: z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional(),
+  NEXT_PUBLIC_JAW_DELEGATE_ADDRESS: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
 });
 export type Environment = z.infer<typeof EnvironmentSchema>;
 export const parseEnvironment = (source: Record<string, string | undefined>): Environment =>

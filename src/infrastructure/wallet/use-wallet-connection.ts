@@ -2,7 +2,6 @@
 
 import { useAccount, useConnect, useDisconnect, useSignMessage, useSwitchChain } from 'wagmi';
 import type { WalletConnection } from '@/application/interfaces/wallet';
-import { appKit } from './providers';
 
 export function useWalletConnection(): WalletConnection {
   const { address, chainId, status } = useAccount();
@@ -15,8 +14,7 @@ export function useWalletConnection(): WalletConnection {
     chainId: chainId ?? null,
     status,
     connect: async () => {
-      if (appKit) await appKit.open({ view: 'Connect' });
-      else if (connectors[0]) await connectAsync({ connector: connectors[0] });
+      if (connectors[0]) await connectAsync({ connector: connectors[0] });
       else throw new Error('No compatible EVM wallet was found.');
     },
     disconnect: async () => {
