@@ -1,0 +1,150 @@
+.solana-wallet-page {
+  min-height: 100vh;
+  padding: 56px clamp(24px, 8vw, 120px);
+  background: #07140f;
+  color: #f5f8f6;
+}
+
+.solana-wallet-header,
+.solana-wallet-card-header,
+.solana-wallet-connected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.solana-wallet-header {
+  max-width: 920px;
+  margin: 0 auto 28px;
+}
+
+.solana-wallet-header h1,
+.solana-wallet-card h2,
+.solana-wallet-card p {
+  margin: 0;
+}
+
+.solana-wallet-header h1 {
+  margin: 6px 0;
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.solana-wallet-header > div > p:last-child,
+.solana-wallet-muted {
+  color: #aebdb5;
+}
+
+.solana-wallet-eyebrow {
+  color: #7df0b4;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.solana-wallet-back,
+.solana-wallet-secondary,
+.solana-wallet-options button,
+.solana-wallet-card select {
+  border: 1px solid #2a5141;
+  border-radius: 10px;
+  background: #10271e;
+  color: inherit;
+  font: inherit;
+}
+
+.solana-wallet-back,
+.solana-wallet-secondary {
+  padding: 10px 14px;
+  text-decoration: none;
+}
+
+.solana-wallet-card {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 28px;
+  border: 1px solid #214333;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #10271e, #0b1b15);
+}
+
+.solana-wallet-card select {
+  padding: 9px 12px;
+}
+
+.solana-wallet-options,
+.solana-wallet-connected,
+.solana-wallet-status {
+  margin-top: 28px;
+}
+
+.solana-wallet-options > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.solana-wallet-options button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.solana-wallet-options img {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.solana-wallet-connected {
+  align-items: end;
+  padding: 20px;
+  border-radius: 12px;
+  background: rgb(5 15 11 / 45%);
+}
+
+.solana-wallet-connected code,
+.solana-wallet-connected strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 1.2rem;
+}
+
+.solana-wallet-position {
+  width: 100%;
+  padding-top: 14px;
+  border-top: 1px solid #214333;
+}
+
+.solana-wallet-position > p:last-child {
+  margin: 6px 0 0;
+  color: #c8d5ce;
+}
+
+.solana-wallet-secondary {
+  cursor: pointer;
+}
+
+.solana-wallet-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #aebdb5;
+}
+
+@media (max-width: 640px) {
+  .solana-wallet-page {
+    padding: 32px 20px;
+  }
+
+  .solana-wallet-header,
+  .solana-wallet-card-header,
+  .solana-wallet-connected {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
