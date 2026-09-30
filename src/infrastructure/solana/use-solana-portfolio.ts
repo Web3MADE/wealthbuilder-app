@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Portfolio } from '@/domain';
 import { solanaChain, solanaPortfolioService } from './solana-portfolio-source';
 import { useSolanaClient, useSolanaCluster } from './solana-provider';
@@ -8,6 +8,7 @@ import { useSolanaClient, useSolanaCluster } from './solana-provider';
 export type SolanaPortfolioState = Readonly<{
   portfolio: Portfolio | null;
   status: 'idle' | 'loading' | 'ready' | 'error';
+  refresh: () => void;
 }>;
 
 export function useSolanaPortfolio(walletAddress: string | null): SolanaPortfolioState {
@@ -16,6 +17,8 @@ export function useSolanaPortfolio(walletAddress: string | null): SolanaPortfoli
   const service = useMemo(() => solanaPortfolioService(client.rpc, cluster), [client, cluster]);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [status, setStatus] = useState<SolanaPortfolioState['status']>('idle');
+  const [refreshCount, setRefreshCount] = useState(0);
+  const refresh = useCallback(() => setRefreshCount((count) => count + 1), []);
 
   useEffect(() => {
     if (!walletAddress) {
@@ -41,7 +44,7 @@ export function useSolanaPortfolio(walletAddress: string | null): SolanaPortfoli
     return () => {
       current = false;
     };
-  }, [cluster, service, walletAddress]);
+  }, [cluster, refreshCount, service, walletAddress]);
 
-  return { portfolio, status };
+  return { portfolio, status, refresh };
 }

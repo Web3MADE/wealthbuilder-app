@@ -125,6 +125,129 @@
   color: #c8d5ce;
 }
 
+.solana-policy-panel {
+  display: grid;
+  width: 100%;
+  gap: 16px;
+  padding-top: 18px;
+  border-top: 1px solid #214333;
+}
+
+.solana-transfer-panel {
+  display: grid;
+  width: 100%;
+  gap: 16px;
+  padding-top: 18px;
+  border-top: 1px solid #214333;
+}
+
+.solana-transfer-panel h3,
+.solana-transfer-panel p {
+  margin: 5px 0 0;
+}
+
+.solana-transfer-panel form,
+.solana-transfer-review {
+  display: grid;
+  gap: 12px;
+}
+
+.solana-transfer-panel label {
+  display: grid;
+  gap: 6px;
+  color: #c8d5ce;
+  font-size: 0.9rem;
+}
+
+.solana-transfer-panel input {
+  padding: 9px 10px;
+  border: 1px solid #2a5141;
+  border-radius: 8px;
+  background: #07140f;
+  color: inherit;
+}
+
+.solana-transfer-panel button {
+  width: fit-content;
+  padding: 10px 14px;
+  border: 1px solid #2a5141;
+  border-radius: 10px;
+  background: #7df0b4;
+  color: #07140f;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.solana-transfer-review dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.solana-transfer-review dt {
+  color: #aebdb5;
+  font-size: 0.8rem;
+}
+
+.solana-transfer-review dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.solana-transfer-error {
+  color: #ffac9d;
+}
+
+.solana-policy-panel h3,
+.solana-policy-panel p {
+  margin: 5px 0 0;
+}
+
+.solana-policy-panel form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.solana-policy-panel label {
+  display: grid;
+  gap: 6px;
+  color: #c8d5ce;
+  font-size: 0.9rem;
+}
+
+.solana-policy-panel input:not([type='checkbox']) {
+  padding: 9px 10px;
+  border: 1px solid #2a5141;
+  border-radius: 8px;
+  background: #07140f;
+  color: inherit;
+}
+
+.solana-policy-panel label:has(input[type='checkbox']) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.solana-policy-panel button {
+  width: fit-content;
+  padding: 10px 14px;
+  border: 1px solid #2a5141;
+  border-radius: 10px;
+  background: #7df0b4;
+  color: #07140f;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.solana-policy-notice {
+  color: #aebdb5;
+}
+
 .solana-wallet-secondary {
   cursor: pointer;
 }
@@ -146,5 +269,13 @@
   .solana-wallet-connected {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .solana-policy-panel form {
+    grid-template-columns: 1fr;
+  }
+
+  .solana-transfer-review dl {
+    grid-template-columns: 1fr;
   }
 }
