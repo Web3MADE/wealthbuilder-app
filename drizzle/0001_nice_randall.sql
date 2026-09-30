@@ -1,0 +1,2 @@
+ALTER TABLE "policies" DROP CONSTRAINT "policies_wallet_address_version_pk";--> statement-breakpoint
+ALTER TABLE "policies" ADD CONSTRAINT "policies_wallet_address_chain_id_version_pk" PRIMARY KEY("wallet_address","chain_id","version");

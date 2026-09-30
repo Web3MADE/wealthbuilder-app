@@ -9,12 +9,11 @@ export class DrizzlePolicyRepository implements PolicyRepositoryPort {
   constructor(private readonly db: Database) {}
 
   async getActive(walletId: string, chain: ChainRef): Promise<PersonalWealthPolicy | null> {
+    const normalizedWallet = normalizeWalletId(walletId, chain);
     const [row] = await this.db
       .select()
       .from(policies)
-      .where(
-        and(eq(policies.walletAddress, walletId.toLowerCase()), eq(policies.chainId, chain.id)),
-      )
+      .where(and(eq(policies.walletAddress, normalizedWallet), eq(policies.chainId, chain.id)))
       .orderBy(desc(policies.version))
       .limit(1);
     return row ? toPolicy(row) : null;
@@ -25,7 +24,7 @@ export class DrizzlePolicyRepository implements PolicyRepositoryPort {
     chain: ChainRef,
     input: PolicySettings,
   ): Promise<PersonalWealthPolicy> {
-    const normalizedWallet = walletId.toLowerCase();
+    const normalizedWallet = normalizeWalletId(walletId, chain);
     return this.db.transaction(async (tx) => {
       await tx.insert(users).values({ walletAddress: normalizedWallet }).onConflictDoNothing();
       await tx.execute(
@@ -50,6 +49,11 @@ export class DrizzlePolicyRepository implements PolicyRepositoryPort {
       return next;
     });
   }
+}
+
+function normalizeWalletId(walletId: string, chain: ChainRef): string {
+  // EVM addresses are case-insensitive, while Solana base58 public keys are case-sensitive.
+  return chain.id.startsWith('solana-') ? walletId : walletId.toLowerCase();
 }
 
 function sameSettings(current: PolicySettings, next: PolicySettings): boolean {

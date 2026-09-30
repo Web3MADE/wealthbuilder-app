@@ -3,12 +3,18 @@ import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { usd, type PolicySettings } from '../src/domain';
+import { PolicyService } from '../src/application/policy-service';
 import { DrizzlePolicyRepository } from '../src/infrastructure/persistence/drizzle-policy-repository';
 import type { Database } from '../src/infrastructure/persistence/postgres';
+import {
+  defaultSolanaPolicySettings,
+  SolanaPolicyContext,
+} from '../src/infrastructure/solana/solana-policy-context';
 
 const chain = { id: 'avalanche-fuji' };
 const alice = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const bob = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+const solanaWallet = 'So11111111111111111111111111111111111111112';
 const settings: PolicySettings = {
   allowedAssetIds: ['usdc', 'avax'],
   excludedAssetIds: ['doge'],
@@ -59,5 +65,24 @@ describe('Drizzle policy repository', () => {
     const saved = await repository.saveNext(bob, chain, settings);
     expect(saved.version).toBe(1);
     expect((await repository.getActive(alice, chain))?.version).toBe(2);
+  });
+
+  it('persists Solana policies independently for devnet and localnet', async () => {
+    const service = new PolicyService(repository);
+    const devnet = new SolanaPolicyContext('devnet');
+    const localnet = new SolanaPolicyContext('localnet');
+
+    const savedDevnet = await devnet.save(service, solanaWallet, defaultSolanaPolicySettings);
+    const savedLocalnet = await localnet.save(service, solanaWallet, defaultSolanaPolicySettings);
+    const changedDevnet = await devnet.save(service, solanaWallet, {
+      ...defaultSolanaPolicySettings,
+      maxAssetConcentrationBps: 8_000,
+    });
+
+    expect(savedDevnet.policy?.version).toBe(1);
+    expect(savedLocalnet.policy?.version).toBe(1);
+    expect(changedDevnet.policy?.version).toBe(2);
+    expect((await devnet.load(service, solanaWallet))?.maxAssetConcentrationBps).toBe(8_000);
+    expect((await localnet.load(service, solanaWallet))?.maxAssetConcentrationBps).toBe(10_000);
   });
 });
