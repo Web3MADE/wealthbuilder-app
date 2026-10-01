@@ -1,5 +1,5 @@
-import { ProductPage } from '@/bootstrap-client';
+import { LegacyProductPage } from '@/presentation/legacy/LegacyProductPage';
 
 export default function WalletDemoPage() {
-  return <ProductPage view="home" />;
+  return <LegacyProductPage view="home" />;
 }

@@ -55,6 +55,7 @@ export function SolanaDemoShell({
   );
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [connectError, setConnectError] = useState('');
+  const [showExternalWallets, setShowExternalWallets] = useState(false);
   const [strategy, setStrategy] = useState<SolanaStrategyResult | null>(null);
   const [findingStrategy, setFindingStrategy] = useState(false);
   const [strategyError, setStrategyError] = useState('');
@@ -68,7 +69,7 @@ export function SolanaDemoShell({
     'recommendation' | 'review'
   > | null>(null);
   const jitoSolBalance = useJitoSolBalance(wallet.address);
-  const jitoSolExecutor = useJitoSolExecutor();
+  const jitoSolExecutor = useJitoSolExecutor(wallet);
   const position = portfolio.portfolio?.positions[0];
   const balance = position ? formatSol(position.amount.value) : null;
   const network = `Solana ${cluster === 'devnet' ? 'Devnet' : 'Localnet'}`;
@@ -279,22 +280,88 @@ export function SolanaDemoShell({
           <span className="solana-network-chip">{network}</span>
         </header>
 
-        {!wallet.isReady ? (
+        {!wallet.isPrivyConfigured ? (
+          <section className="solana-entry-state" aria-labelledby="solana-entry-title">
+            <span className="solana-entry-mark">
+              <Wallet size={26} aria-hidden="true" />
+            </span>
+            <p className="solana-overline">Developer setup required</p>
+            <h1 id="solana-entry-title">Connect Privy to enable WealthBuilder sign-in.</h1>
+            <p>
+              Add <code>NEXT_PUBLIC_PRIVY_APP_ID</code> to your local environment, then restart the
+              app.
+            </p>
+          </section>
+        ) : wallet.isEmbeddedWalletPending ? (
           <section className="solana-entry-state" aria-live="polite">
             <RefreshCw className="solana-loading-icon" aria-hidden="true" />
-            <p>Checking for your wallet…</p>
+            <p className="solana-overline">WealthBuilder wallet</p>
+            <h1>Setting up your secure wallet.</h1>
+            <p>This only takes a moment. Your wallet stays self-custodial.</p>
+          </section>
+        ) : wallet.walletSetupError ? (
+          <section className="solana-entry-state" aria-labelledby="solana-entry-title">
+            <span className="solana-entry-mark">
+              <Wallet size={26} aria-hidden="true" />
+            </span>
+            <p className="solana-overline">Wallet setup</p>
+            <h1 id="solana-entry-title">We couldn’t finish creating your wallet.</h1>
+            <p>{wallet.walletSetupError}</p>
+            <button
+              type="button"
+              className="solana-primary-action"
+              onClick={() => void wallet.retryWalletSetup()}
+            >
+              Retry wallet setup <ArrowRight size={18} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="solana-text-button"
+              onClick={() => void wallet.disconnect()}
+            >
+              Log out
+            </button>
+          </section>
+        ) : !wallet.isReady ? (
+          <section className="solana-entry-state" aria-live="polite">
+            <RefreshCw className="solana-loading-icon" aria-hidden="true" />
+            <p>Getting WealthBuilder ready…</p>
           </section>
         ) : !wallet.address ? (
           <section className="solana-entry-state" aria-labelledby="solana-entry-title">
             <span className="solana-entry-mark">
               <Wallet size={26} aria-hidden="true" />
             </span>
-            <p className="solana-overline">Your wealth, your rules</p>
-            <h1 id="solana-entry-title">Build a strategy around your goals.</h1>
+            <p className="solana-overline">WealthBuilder</p>
+            <h1 id="solana-entry-title">Build crypto wealth. Not hype.</h1>
             <p>
-              Connect your Solana wallet to see your portfolio and define a strategy that fits you.
+              Tell WealthBuilder what you’re building toward. We’ll match you with an on-chain
+              strategy that fits.
             </p>
-            {wallet.wallets.length ? (
+            <div className="solana-connect-options">
+              <button
+                type="button"
+                className="solana-primary-action"
+                onClick={() => wallet.startAuthentication('google')}
+              >
+                Continue with Google <ArrowRight size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="solana-secondary-action"
+                onClick={() => wallet.startAuthentication('email')}
+              >
+                Continue with email
+              </button>
+              <button
+                type="button"
+                className="solana-text-button"
+                onClick={() => setShowExternalWallets((current) => !current)}
+              >
+                Connect existing wallet
+              </button>
+            </div>
+            {showExternalWallets && wallet.wallets.length ? (
               <div className="solana-connect-options">
                 {wallet.wallets.map((availableWallet) => (
                   <button
@@ -316,15 +383,42 @@ export function SolanaDemoShell({
                 ))}
               </div>
             ) : (
-              <p className="solana-entry-muted">
-                Install or unlock a Wallet Standard Solana wallet to continue.
-              </p>
+              showExternalWallets && (
+                <p className="solana-entry-muted">
+                  Install or unlock a Wallet Standard Solana wallet to connect it here.
+                </p>
+              )
             )}
             {connectError && (
               <p className="solana-flow-error" role="alert">
                 {connectError}
               </p>
             )}
+          </section>
+        ) : wallet.source === 'embedded' &&
+          portfolio.status === 'ready' &&
+          position?.amount.value === 0n ? (
+          <section
+            className="solana-entry-state solana-wallet-ready"
+            aria-labelledby="solana-entry-title"
+          >
+            <span className="solana-entry-mark">
+              <Wallet size={26} aria-hidden="true" />
+            </span>
+            <p className="solana-overline">Your WealthBuilder wallet is ready</p>
+            <h1 id="solana-entry-title">Wallet ready</h1>
+            <p>Demo funds are being prepared.</p>
+            <div className="solana-wallet-detail">
+              <span>Your self-custodial wallet</span>
+              <code>{shortenedAddress(wallet.address)}</code>
+            </div>
+            <button
+              type="button"
+              className="solana-text-button"
+              onClick={() => void wallet.disconnect()}
+            >
+              Log out
+            </button>
           </section>
         ) : findingStrategy ? (
           <section className="solana-strategy-loading" aria-live="polite">
@@ -426,15 +520,17 @@ export function SolanaDemoShell({
                 Switch your wallet to Solana Devnet to continue.
               </p>
             )}
-            <SolanaWalletTools
-              address={wallet.address}
-              balanceLamports={position?.amount.value ?? null}
-              canSignTransactions={wallet.canSignTransactions}
-              cluster={cluster}
-              portfolioId={portfolio.portfolio?.id ?? `${cluster}:${wallet.address}`}
-              signMessage={wallet.signMessage}
-              onConfirmed={portfolio.refresh}
-            />
+            {wallet.source !== 'embedded' && (
+              <SolanaWalletTools
+                address={wallet.address}
+                balanceLamports={position?.amount.value ?? null}
+                canSignTransactions={wallet.canSignTransactions}
+                cluster={cluster}
+                portfolioId={portfolio.portfolio?.id ?? `${cluster}:${wallet.address}`}
+                signMessage={wallet.signMessage}
+                onConfirmed={portfolio.refresh}
+              />
+            )}
           </section>
         )}
       </div>

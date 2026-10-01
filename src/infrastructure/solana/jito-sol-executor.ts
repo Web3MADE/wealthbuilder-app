@@ -86,8 +86,10 @@ export type JitoSolConfirmation = Readonly<{
   confirmedAt: Date;
 }>;
 
+export type JitoSolTransactionMessage = Awaited<ReturnType<typeof buildJitoSolDepositMessage>>;
+
 type PreparedJitoDeposit = Readonly<{
-  message: Awaited<ReturnType<typeof buildJitoSolDepositMessage>>;
+  message: JitoSolTransactionMessage;
   depositedLamports: bigint;
 }>;
 
@@ -103,6 +105,7 @@ export class JitoSolExecutor {
       cluster: SolanaCluster;
       rpc: JitoRpc;
       payer: () => TransactionSigner;
+      submitTransaction?: (message: JitoSolTransactionMessage) => Promise<Signature>;
     }>,
   ) {}
 
@@ -126,7 +129,9 @@ export class JitoSolExecutor {
     let signature: Signature;
     const payer = this.dependencies.payer();
     try {
-      if (isTransactionModifyingSigner(payer) || isTransactionPartialSigner(payer)) {
+      if (this.dependencies.submitTransaction) {
+        signature = await this.dependencies.submitTransaction(prepared.message);
+      } else if (isTransactionModifyingSigner(payer) || isTransactionPartialSigner(payer)) {
         const signed = await signTransactionMessageWithSigners(prepared.message);
         signature = await this.dependencies.rpc
           .sendTransaction(getBase64EncodedWireTransaction(signed), {

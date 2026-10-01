@@ -3,8 +3,9 @@
 import { useMemo } from 'react';
 import { JitoSolExecutor } from './jito-sol-executor';
 import { useSolanaClient, useSolanaCluster } from './solana-provider';
+import type { SolanaWalletConnection } from './use-solana-wallet';
 
-export function useJitoSolExecutor() {
+export function useJitoSolExecutor(wallet: SolanaWalletConnection) {
   const client = useSolanaClient();
   const { cluster } = useSolanaCluster();
   return useMemo(
@@ -12,8 +13,11 @@ export function useJitoSolExecutor() {
       new JitoSolExecutor({
         cluster,
         rpc: client.rpc as never,
-        payer: () => client.payer,
+        payer: wallet.jitoExecution?.payer ?? (() => client.payer),
+        ...(wallet.jitoExecution
+          ? { submitTransaction: wallet.jitoExecution.submitTransaction }
+          : {}),
       }),
-    [client, cluster],
+    [client, cluster, wallet.jitoExecution],
   );
 }

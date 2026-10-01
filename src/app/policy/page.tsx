@@ -1,5 +1,5 @@
-import { ProductPage } from '@/bootstrap-client';
+import { LegacyProductPage } from '@/presentation/legacy/LegacyProductPage';
 
 export default function PolicyPage() {
-  return <ProductPage view="policy" />;
+  return <LegacyProductPage view="policy" />;
 }
