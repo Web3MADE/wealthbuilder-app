@@ -6,7 +6,7 @@
   --solana-muted: #a7b5af;
   --solana-mint: #8cf3ad;
   min-height: 100svh;
-  padding: 20px;
+  padding: 16px;
   background:
     radial-gradient(circle at 50% -10%, rgb(48 104 74 / 22%), transparent 42%), var(--solana-bg);
   color: #f5f9f6;
@@ -14,8 +14,8 @@
 }
 
 .solana-demo-shell {
-  width: min(100%, 430px);
-  min-height: calc(100svh - 40px);
+  width: min(100%, 420px);
+  min-height: calc(100svh - 32px);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -26,8 +26,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 54px;
-  margin-bottom: 28px;
+  min-height: 46px;
+  margin-bottom: 20px;
 }
 
 .solana-demo-brand {
@@ -75,16 +75,16 @@
 .solana-opportunity-review,
 .solana-strategy-active {
   display: grid;
-  gap: 22px;
+  gap: 16px;
 }
 
 .solana-review-product,
 .solana-active-product {
   display: grid;
   gap: 5px;
-  padding: 19px;
-  border: 1px solid rgb(140 243 173 / 25%);
-  border-radius: 17px;
+  padding: 18px;
+  border: 1px solid rgb(140 243 173 / 22%);
+  border-radius: 18px;
   background: linear-gradient(145deg, rgb(37 78 57 / 60%), var(--solana-panel));
 }
 
@@ -104,9 +104,16 @@
   letter-spacing: -0.03em;
 }
 
+.solana-review-product p {
+  margin: 0;
+  color: var(--solana-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .solana-active-product p {
   width: fit-content;
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   padding: 4px 8px;
   border-radius: 99px;
   background: rgb(140 243 173 / 14%);
@@ -158,7 +165,7 @@
 
 .solana-strategy-active {
   align-content: start;
-  padding-bottom: 16px;
+  padding-bottom: 8px;
 }
 
 .solana-active-mark {
@@ -236,7 +243,7 @@
 }
 
 .solana-entry-state {
-  min-height: min(580px, calc(100svh - 160px));
+  min-height: min(520px, calc(100svh - 126px));
   align-content: center;
 }
 
@@ -262,8 +269,8 @@
 .solana-preferences h1,
 .solana-strategy-summary h1 {
   margin: 0;
-  font-size: clamp(2rem, 8vw, 2.55rem);
-  line-height: 1.08;
+  font-size: clamp(2rem, 8.5vw, 2.45rem);
+  line-height: 1.04;
   letter-spacing: -0.05em;
 }
 
@@ -278,7 +285,7 @@
 }
 
 .solana-match-intro {
-  margin: -11px 0 0;
+  margin: -5px 0 2px;
   color: var(--solana-muted);
   font-size: 14px;
   line-height: 1.5;
@@ -286,7 +293,8 @@
 
 .solana-other-strategies {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  padding-top: 4px;
 }
 
 .solana-other-strategies > div {
@@ -305,7 +313,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px;
+  padding: 13px 14px;
   border: 1px solid rgb(140 243 173 / 12%);
   border-radius: 14px;
   background: rgb(255 255 255 / 2%);
@@ -362,9 +370,9 @@
 }
 
 .solana-primary-action {
-  min-height: 52px;
+  min-height: 54px;
   padding: 12px 16px;
-  border-radius: 13px;
+  border-radius: 14px;
   background: var(--solana-mint);
   color: #0a1710;
   font-size: 15px;
@@ -372,6 +380,10 @@
 
 .solana-primary-action:hover:not(:disabled) {
   background: #b0fac5;
+}
+
+.solana-primary-action:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .solana-primary-action:disabled {
@@ -431,8 +443,8 @@
 
 .solana-balance-card {
   display: grid;
-  gap: 24px;
-  padding: 22px;
+  gap: 20px;
+  padding: 20px;
   border: 1px solid var(--solana-line);
   border-radius: 19px;
   background: linear-gradient(145deg, #1b2a25, var(--solana-panel));
@@ -531,7 +543,7 @@
 
 .solana-preferences,
 .solana-strategy-summary {
-  min-height: min(610px, calc(100svh - 145px));
+  min-height: min(570px, calc(100svh - 126px));
   align-content: start;
 }
 
@@ -539,20 +551,20 @@
 .solana-strategy-recommendation,
 .solana-strategy-unavailable,
 .solana-opportunity-review {
-  min-height: min(610px, calc(100svh - 145px));
+  min-height: min(570px, calc(100svh - 126px));
   align-content: start;
 }
 
 .solana-strategy-loading {
-  padding-top: 72px;
+  padding-top: 48px;
 }
 
 .solana-strategy-loading h1,
 .solana-strategy-recommendation h1,
 .solana-strategy-unavailable h1,
 .solana-opportunity-review h1 {
-  margin: -10px 0 0;
-  font-size: clamp(1.9rem, 7.5vw, 2.35rem);
+  margin: -5px 0 0;
+  font-size: clamp(1.9rem, 8vw, 2.35rem);
   line-height: 1.1;
   letter-spacing: -0.05em;
 }
@@ -616,8 +628,10 @@
 
 .solana-opportunity-card {
   display: grid;
-  gap: 6px;
-  padding: 19px;
+  gap: 7px;
+  padding: 18px;
+  border-color: rgb(140 243 173 / 26%);
+  background: linear-gradient(145deg, rgb(37 78 57 / 56%), var(--solana-panel));
 }
 
 .solana-opportunity-card > p,
@@ -634,6 +648,11 @@
   margin: 0;
   font-size: 17px;
   letter-spacing: -0.02em;
+}
+
+.solana-opportunity-card h2 {
+  font-size: 21px;
+  letter-spacing: -0.035em;
 }
 
 .solana-opportunity-card > strong {
@@ -659,13 +678,13 @@
 .solana-allocation-card {
   display: grid;
   gap: 3px;
-  padding: 19px;
+  padding: 18px;
   background: linear-gradient(145deg, #20342a, #16251f);
 }
 
 .solana-allocation-card strong {
   color: var(--solana-mint);
-  font-size: 44px;
+  font-size: 46px;
   line-height: 1;
   letter-spacing: -0.07em;
 }
@@ -680,7 +699,7 @@
 .solana-control-note {
   display: grid;
   gap: 12px;
-  padding: 18px;
+  padding: 17px;
 }
 
 .solana-explanation h3 {
@@ -730,7 +749,8 @@
 }
 
 .solana-control-note {
-  background: #14211c;
+  border-color: rgb(140 243 173 / 14%);
+  background: rgb(140 243 173 / 5%);
 }
 
 .solana-review-facts {
@@ -744,7 +764,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 18px;
-  padding: 14px 16px;
+  padding: 13px 16px;
   border-bottom: 1px solid var(--solana-line);
 }
 
@@ -771,7 +791,7 @@
 
 .solana-preference-options {
   display: grid;
-  gap: 10px;
+  gap: 9px;
   margin-top: 2px;
 }
 
@@ -780,8 +800,8 @@
   align-items: center;
   gap: 13px;
   min-width: 0;
-  min-height: 82px;
-  padding: 15px;
+  min-height: 78px;
+  padding: 14px;
   border: 1px solid var(--solana-line);
   border-radius: 14px;
   background: var(--solana-panel);
@@ -837,7 +857,7 @@
   grid-template-columns: minmax(96px, 0.75fr) minmax(0, 1.25fr);
   gap: 10px;
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: 8px;
 }
 
 .solana-flow-actions .solana-secondary-action,

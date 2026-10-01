@@ -44,10 +44,9 @@ export function SolanaStrategyRecommendation({
   return (
     <section className="solana-strategy-recommendation" aria-labelledby="solana-strategy-title">
       <p className="solana-overline">Your strategy</p>
-      <h1 id="solana-strategy-title">Your best available match.</h1>
+      <h1 id="solana-strategy-title">Put your SOL to work.</h1>
       <p className="solana-match-intro">
-        WealthBuilder matches your goals to curated strategy types. JitoSOL is the first available
-        to execute.
+        A strategy selected for your goals, timeline, and comfort with risk.
       </p>
       {opportunity.isDevelopmentFixture && (
         <p className="solana-development-fixture" role="status">
@@ -55,20 +54,22 @@ export function SolanaStrategyRecommendation({
         </p>
       )}
       <section className="solana-opportunity-card" aria-label="Recommended opportunity">
-        <p>Recommended opportunity</p>
-        <h2>{opportunity.name}</h2>
-        <strong>{opportunity.protocol}</strong>
+        <p>WealthBuilder recommends</p>
+        <h2>Put your SOL to work</h2>
+        <strong>
+          {opportunity.protocol} · {opportunity.name}
+        </strong>
         <div className="solana-opportunity-facts">
-          <span>{formatCategory(opportunity.category)}</span>
           <span>WealthBuilder: {formatRisk(opportunity.riskLevel)}</span>
-          <span>{formatLiquidity(opportunity.liquidity)} liquidity</span>
+          <span>{formatLiquidity(opportunity.liquidity)} access</span>
+          <span>{opportunity.leverage ? 'Uses borrowing' : 'No borrowing or leverage'}</span>
         </div>
       </section>
       <section className="solana-allocation-card" aria-label="Recommended allocation">
-        <span>Recommended allocation</span>
+        <span>Amount to put to work</span>
         <strong>{allocationPercent}%</strong>
         <p>
-          of your SOL · up to {formatSol(allocationAmount(balanceLamports, allocationPercent))} SOL
+          ≈ {formatSol(allocationAmount(balanceLamports, allocationPercent))} SOL from your wallet
         </p>
       </section>
       <section className="solana-explanation" aria-labelledby="solana-why-title">
@@ -101,12 +102,12 @@ export function SolanaStrategyRecommendation({
         )}
       </section>
       <section className="solana-control-note" aria-label="Your control">
-        <h2>You stay in control</h2>
+        <h2>Built around your boundaries</h2>
         <p>{deterministicReasons.at(-1)}</p>
       </section>
       <OtherStrategyPreviews />
       <button type="button" className="solana-primary-action" onClick={onReview}>
-        Review opportunity <ArrowRight size={18} aria-hidden="true" />
+        Review your strategy <ArrowRight size={18} aria-hidden="true" />
       </button>
       <button type="button" className="solana-text-button" onClick={onBack}>
         <ArrowLeft size={16} aria-hidden="true" /> Edit preferences
@@ -174,15 +175,15 @@ export function SolanaOpportunityReview({
   const isJitoSol = opportunity.id === 'jito-sol-liquid-staking';
   const executionLabel =
     executionStage === 'preparing'
-      ? 'Preparing transaction'
+      ? 'Preparing your strategy'
       : executionStage === 'awaiting-approval'
-        ? 'Awaiting wallet approval'
+        ? 'Waiting for your approval'
         : executionStage === 'submitted'
-          ? 'Transaction submitted'
+          ? 'Sent to Solana'
           : executionStage === 'confirming'
-            ? 'Confirming on Solana'
+            ? 'Confirming your strategy'
             : executionStage === 'confirmed'
-              ? 'Transaction confirmed'
+              ? 'Strategy confirmed'
               : executionStage === 'rejected'
                 ? 'Wallet approval rejected'
                 : executionStage === 'failed'
@@ -195,11 +196,14 @@ export function SolanaOpportunityReview({
     executionStage === 'confirming';
   return (
     <section className="solana-opportunity-review" aria-labelledby="solana-review-title">
-      <p className="solana-overline">Review opportunity</p>
-      <h1 id="solana-review-title">Review before you stake.</h1>
+      <p className="solana-overline">Review your strategy</p>
+      <h1 id="solana-review-title">Ready to put your SOL to work?</h1>
       <section className="solana-review-product" aria-label="Selected opportunity">
-        <span>{opportunity.protocol}</span>
-        <h2>{opportunity.name}</h2>
+        <span>Selected strategy</span>
+        <h2>Put your SOL to work</h2>
+        <p>
+          {opportunity.protocol} · {opportunity.name}
+        </p>
       </section>
       <dl className="solana-review-facts">
         <div>
@@ -216,14 +220,18 @@ export function SolanaOpportunityReview({
         </div>
         <div>
           <dt>Liquidity</dt>
-          <dd>{formatLiquidity(opportunity.liquidity)}</dd>
+          <dd>{formatLiquidity(opportunity.liquidity)} access</dd>
+        </div>
+        <div>
+          <dt>Borrowing</dt>
+          <dd>{opportunity.leverage ? 'Included' : 'None'}</dd>
         </div>
       </dl>
       <section className="solana-control-note">
         <h2>What happens next</h2>
         <p>
-          Your SOL will be deposited into the JitoSOL stake pool. In return, your wallet receives
-          JitoSOL.
+          We’ll put part of your SOL into Jito’s liquid staking strategy. Your wallet will receive
+          JitoSOL in return.
         </p>
       </section>
       <section className="solana-approval-note" aria-label="Approval control">
@@ -241,7 +249,11 @@ export function SolanaOpportunityReview({
             onClick={onStake}
             disabled={actionInFlight}
           >
-            {actionInFlight ? executionLabel : executionStage ? 'Try again' : 'Approve & stake'}{' '}
+            {actionInFlight
+              ? executionLabel
+              : executionStage
+                ? 'Try again'
+                : `Put ${allocationPercent}% to work`}{' '}
             <ArrowRight size={18} aria-hidden="true" />
           </button>
           {executionLabel && (
@@ -292,9 +304,9 @@ export function SolanaStrategyActive({
       <p className="solana-overline">Strategy active</p>
       <h1 id="solana-active-title">Your strategy is active.</h1>
       <section className="solana-active-product">
-        <span>Jito</span>
-        <h2>JitoSOL Liquid Staking</h2>
-        <p>Confirmed</p>
+        <span>Strategy details</span>
+        <h2>JitoSOL liquid staking</h2>
+        <p>Jito · Confirmed</p>
       </section>
       <dl className="solana-active-facts">
         <div>
@@ -302,7 +314,7 @@ export function SolanaStrategyActive({
           <dd>{formatSol(depositedLamports)} SOL</dd>
         </div>
         <div>
-          <dt>JitoSOL position</dt>
+          <dt>Your JitoSOL position</dt>
           <dd>
             {jitoSolLamports === null ? 'Unavailable' : `${formatSol(jitoSolLamports)} JitoSOL`}
           </dd>
@@ -318,7 +330,7 @@ export function SolanaStrategyActive({
       </dl>
       {refreshMessage && <p className="solana-refresh-warning">{refreshMessage}</p>}
       <a href={explorerUrl} target="_blank" rel="noreferrer" className="solana-transaction-link">
-        View transaction {shortenSignature(signature)} <ExternalLink size={15} aria-hidden="true" />
+        View transaction <ExternalLink size={15} aria-hidden="true" />
       </a>
       <section className="solana-control-note">
         <h2>You stay in control</h2>
@@ -341,18 +353,10 @@ function formatSol(lamports: bigint) {
   return fraction ? `${whole}.${fraction}` : whole.toString();
 }
 
-function formatCategory(value: string) {
-  return value[0] + value.slice(1).toLowerCase();
-}
-
 function formatRisk(value: string) {
   return value[0] + value.slice(1).toLowerCase();
 }
 
 function formatLiquidity(value: string) {
   return value[0] + value.slice(1).toLowerCase();
-}
-
-function shortenSignature(value: string) {
-  return `${value.slice(0, 6)}…${value.slice(-6)}`;
 }
