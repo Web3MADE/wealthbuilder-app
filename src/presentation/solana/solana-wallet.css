@@ -277,6 +277,70 @@
   line-height: 1.55;
 }
 
+.solana-match-intro {
+  margin: -11px 0 0;
+  color: var(--solana-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.solana-other-strategies {
+  display: grid;
+  gap: 10px;
+}
+
+.solana-other-strategies > div {
+  display: grid;
+  gap: 4px;
+}
+
+.solana-other-strategies h2 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: -0.025em;
+}
+
+.solana-strategy-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgb(140 243 173 / 12%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 2%);
+}
+
+.solana-strategy-preview h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.solana-strategy-preview p,
+.solana-preview-disclaimer {
+  margin: 4px 0 0;
+  color: var(--solana-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.solana-strategy-preview button {
+  flex: none;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--solana-line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--solana-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.solana-preview-disclaimer {
+  margin-top: 0;
+}
+
 .solana-connect-options {
   display: grid;
   gap: 10px;

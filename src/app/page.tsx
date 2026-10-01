@@ -1,5 +1,5 @@
-import { EntryGate } from '@/presentation/entry/entry-gate';
+import { redirect } from 'next/navigation';
 
 export default function AppEntry() {
-  return <EntryGate />;
+  redirect('/solana');
 }

@@ -45,6 +45,10 @@ export function SolanaStrategyRecommendation({
     <section className="solana-strategy-recommendation" aria-labelledby="solana-strategy-title">
       <p className="solana-overline">Your strategy</p>
       <h1 id="solana-strategy-title">Your best available match.</h1>
+      <p className="solana-match-intro">
+        WealthBuilder matches your goals to curated strategy types. JitoSOL is the first available
+        to execute.
+      </p>
       {opportunity.isDevelopmentFixture && (
         <p className="solana-development-fixture" role="status">
           Development fixture — no live protocol action is available.
@@ -56,7 +60,7 @@ export function SolanaStrategyRecommendation({
         <strong>{opportunity.protocol}</strong>
         <div className="solana-opportunity-facts">
           <span>{formatCategory(opportunity.category)}</span>
-          <span>{formatRisk(opportunity.riskLevel)} risk</span>
+          <span>WealthBuilder: {formatRisk(opportunity.riskLevel)}</span>
           <span>{formatLiquidity(opportunity.liquidity)} liquidity</span>
         </div>
       </section>
@@ -100,12 +104,43 @@ export function SolanaStrategyRecommendation({
         <h2>You stay in control</h2>
         <p>{deterministicReasons.at(-1)}</p>
       </section>
+      <OtherStrategyPreviews />
       <button type="button" className="solana-primary-action" onClick={onReview}>
         Review opportunity <ArrowRight size={18} aria-hidden="true" />
       </button>
       <button type="button" className="solana-text-button" onClick={onBack}>
         <ArrowLeft size={16} aria-hidden="true" /> Edit preferences
       </button>
+    </section>
+  );
+}
+
+function OtherStrategyPreviews() {
+  return (
+    <section className="solana-other-strategies" aria-labelledby="solana-other-strategies-title">
+      <div>
+        <p className="solana-overline">Other strategies</p>
+        <h2 id="solana-other-strategies-title">More matches, coming next.</h2>
+      </div>
+      <article className="solana-strategy-preview">
+        <div>
+          <h3>Stablecoin lending</h3>
+          <p>Medium risk · Liquid · Lending</p>
+        </div>
+        <button type="button" disabled>
+          Coming next
+        </button>
+      </article>
+      <article className="solana-strategy-preview">
+        <div>
+          <h3>Leveraged yield strategy</h3>
+          <p>High risk · Borrowing, leverage, and liquidation exposure</p>
+        </div>
+        <button type="button" disabled>
+          Preview
+        </button>
+      </article>
+      <p className="solana-preview-disclaimer">Previews only — not currently executable.</p>
     </section>
   );
 }
@@ -259,7 +294,7 @@ export function SolanaStrategyActive({
       <section className="solana-active-product">
         <span>Jito</span>
         <h2>JitoSOL Liquid Staking</h2>
-        <p>Active</p>
+        <p>Confirmed</p>
       </section>
       <dl className="solana-active-facts">
         <div>
@@ -290,7 +325,7 @@ export function SolanaStrategyActive({
         <p>Your wallet remains self-custodial. Future actions require your approval.</p>
       </section>
       <button type="button" className="solana-primary-action" onClick={onPortfolio}>
-        Return to portfolio <ArrowRight size={18} aria-hidden="true" />
+        Back to portfolio <ArrowRight size={18} aria-hidden="true" />
       </button>
     </section>
   );

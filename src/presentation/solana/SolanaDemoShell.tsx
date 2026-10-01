@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowRight, RefreshCw, Wallet } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SolanaStrategyResult } from '@/application/solana-strategy-service';
 import {
   type JitoSolConfirmation,
@@ -14,10 +14,15 @@ import { useJitoSolBalance } from '@/infrastructure/solana/use-jito-sol-balance'
 import { useJitoSolExecutor } from '@/infrastructure/solana/use-jito-sol-executor';
 import {
   defaultSolanaStrategyPreferences,
-  loadSolanaStrategyPreferences,
-  saveSolanaStrategyPreferences,
+  isCompleteSolanaStrategyPreferences,
   type SolanaStrategyPreferences as SolanaStrategyPreferencesValue,
 } from './solana-strategy-preferences';
+import {
+  loadSolanaDemoState,
+  saveSolanaDemoState,
+  solanaDemoStorageKey,
+  type SolanaDemoResumeState,
+} from './solana-demo-state';
 import { SolanaStrategyPreferences } from './SolanaStrategyPreferences';
 import {
   SolanaOpportunityReview,
@@ -57,27 +62,101 @@ export function SolanaDemoShell({
   const [executionError, setExecutionError] = useState('');
   const [activeStrategy, setActiveStrategy] = useState<ActiveStrategy | null>(null);
   const executionInFlight = useRef(false);
+  const restoredScope = useRef<string | null>(null);
+  const pendingResumeState = useRef<Extract<
+    SolanaDemoResumeState,
+    'recommendation' | 'review'
+  > | null>(null);
   const jitoSolBalance = useJitoSolBalance(wallet.address);
   const jitoSolExecutor = useJitoSolExecutor();
+  const position = portfolio.portfolio?.positions[0];
+  const balance = position ? formatSol(position.amount.value) : null;
+  const network = `Solana ${cluster === 'devnet' ? 'Devnet' : 'Localnet'}`;
 
   useEffect(() => {
+    if (!wallet.address) {
+      setPreferences(defaultSolanaStrategyPreferences);
+      setPreferencesLoaded(false);
+      pendingResumeState.current = null;
+      restoredScope.current = null;
+      return;
+    }
+    const scope = solanaDemoStorageKey(wallet.address, cluster);
+    if (restoredScope.current === scope) return;
+    restoredScope.current = scope;
     try {
-      setPreferences(loadSolanaStrategyPreferences(window.sessionStorage));
+      const saved = loadSolanaDemoState(window.localStorage, wallet.address, cluster);
+      setPreferences(saved.preferences);
+      if (saved.activeStrategy?.opportunityId === 'jito-sol-liquid-staking') {
+        const restoredActive: ActiveStrategy = {
+          confirmation: {
+            signature: saved.activeStrategy.signature,
+            depositedLamports: BigInt(saved.activeStrategy.depositedLamports),
+            confirmedAt: new Date(saved.activeStrategy.confirmedAt),
+          },
+          remainingSolLamports: null,
+          jitoSolLamports: null,
+          refreshMessage: null,
+        };
+        setActiveStrategy(restoredActive);
+        setState('active');
+        void Promise.all([portfolio.refresh(), jitoSolBalance.refresh()]).then(
+          ([refreshedPortfolio, refreshedJitoSol]) => {
+            setActiveStrategy({
+              ...restoredActive,
+              remainingSolLamports: refreshedPortfolio?.positions[0]?.amount.value ?? null,
+              jitoSolLamports: refreshedJitoSol,
+              refreshMessage:
+                refreshedPortfolio && refreshedJitoSol !== null
+                  ? null
+                  : 'Your strategy is confirmed, but one portfolio balance could not be refreshed yet.',
+            });
+          },
+        );
+      } else {
+        setActiveStrategy(null);
+        if (
+          (saved.resumeState === 'recommendation' || saved.resumeState === 'review') &&
+          isCompleteSolanaStrategyPreferences(saved.preferences)
+        ) {
+          pendingResumeState.current = saved.resumeState;
+          setState('portfolio');
+        } else {
+          setState(saved.resumeState);
+        }
+      }
     } catch {
       setPreferences(defaultSolanaStrategyPreferences);
+      setState('portfolio');
     } finally {
       setPreferencesLoaded(true);
     }
-  }, []);
+  }, [cluster, jitoSolBalance, portfolio, wallet.address]);
 
   useEffect(() => {
-    if (!preferencesLoaded) return;
+    if (!preferencesLoaded || !wallet.address) return;
     try {
-      saveSolanaStrategyPreferences(window.sessionStorage, preferences);
+      saveSolanaDemoState(window.localStorage, wallet.address, cluster, {
+        preferences,
+        resumeState:
+          state === 'preferences' || state === 'recommendation' || state === 'review'
+            ? state
+            : 'portfolio',
+        activeStrategy: activeStrategy
+          ? {
+              walletAddress: wallet.address,
+              cluster,
+              opportunityId: 'jito-sol-liquid-staking',
+              signature: activeStrategy.confirmation.signature,
+              confirmedAt: activeStrategy.confirmation.confirmedAt.toISOString(),
+              depositedLamports: activeStrategy.confirmation.depositedLamports.toString(),
+            }
+          : null,
+      });
     } catch {
-      // The flow remains usable when browser session storage is unavailable.
+      // The flow remains usable when browser storage is unavailable.
     }
-  }, [preferences, preferencesLoaded]);
+  }, [activeStrategy, cluster, preferences, preferencesLoaded, state, wallet.address]);
 
   useEffect(() => {
     if (!wallet.address && executionInFlight.current) {
@@ -85,10 +164,6 @@ export function SolanaDemoShell({
       setExecutionError('Your wallet disconnected. Reconnect to review and try again.');
     }
   }, [wallet.address]);
-
-  const position = portfolio.portfolio?.positions[0];
-  const balance = position ? formatSol(position.amount.value) : null;
-  const network = `Solana ${cluster === 'devnet' ? 'Devnet' : 'Localnet'}`;
 
   async function connect(walletName: string) {
     setConnectError('');
@@ -99,38 +174,55 @@ export function SolanaDemoShell({
     }
   }
 
-  async function findStrategy() {
-    if (!position || !preferences.timeline || !preferences.risk) return;
-    if (!wallet.networkReady) {
-      setStrategyError('Switch your wallet to Solana Devnet before finding a strategy.');
+  const findStrategy = useCallback(
+    async (resumeState?: 'recommendation' | 'review') => {
+      if (!position || !preferences.timeline || !preferences.risk) return;
+      if (!wallet.networkReady) {
+        setStrategyError('Switch your wallet to Solana Devnet before finding a strategy.');
+        return;
+      }
+      setFindingStrategy(true);
+      setStrategyError('');
+      try {
+        const response = await fetch('/api/solana/strategy', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            goal: preferences.goal,
+            timeline: preferences.timeline,
+            risk: preferences.risk,
+            solBalanceLamports: position.amount.value.toString(),
+            cluster,
+          }),
+        });
+        const result = (await response.json()) as SolanaStrategyResult & { error?: string };
+        if (!response.ok)
+          throw new Error(result.error ?? 'We could not find a strategy right now.');
+        setStrategy(result);
+        setState(resumeState ?? 'recommendation');
+      } catch (error) {
+        setStrategyError(
+          error instanceof Error ? error.message : 'We could not find a strategy right now.',
+        );
+      } finally {
+        setFindingStrategy(false);
+      }
+    },
+    [cluster, position, preferences, wallet.networkReady],
+  );
+
+  useEffect(() => {
+    const resumeState = pendingResumeState.current;
+    if (
+      !resumeState ||
+      !preferencesLoaded ||
+      !isCompleteSolanaStrategyPreferences(preferences) ||
+      !position
+    )
       return;
-    }
-    setFindingStrategy(true);
-    setStrategyError('');
-    try {
-      const response = await fetch('/api/solana/strategy', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          goal: preferences.goal,
-          timeline: preferences.timeline,
-          risk: preferences.risk,
-          solBalanceLamports: position.amount.value.toString(),
-          cluster,
-        }),
-      });
-      const result = (await response.json()) as SolanaStrategyResult & { error?: string };
-      if (!response.ok) throw new Error(result.error ?? 'We could not find a strategy right now.');
-      setStrategy(result);
-      setState('recommendation');
-    } catch (error) {
-      setStrategyError(
-        error instanceof Error ? error.message : 'We could not find a strategy right now.',
-      );
-    } finally {
-      setFindingStrategy(false);
-    }
-  }
+    pendingResumeState.current = null;
+    void findStrategy(resumeState);
+  }, [findStrategy, position, preferences, preferencesLoaded]);
 
   async function stakeRecommendation() {
     const recommendation = strategy?.recommendation;
