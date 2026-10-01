@@ -1,7 +1,6 @@
 'use client';
 
-import { ArrowLeft, ArrowRight, Check, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, ArrowRight, Check, ExternalLink, RefreshCw, ShieldCheck } from 'lucide-react';
 import type { SolanaStrategyResult } from '@/application/solana-strategy-service';
 
 export function SolanaStrategyRecommendation({
@@ -114,36 +113,67 @@ export function SolanaStrategyRecommendation({
 export function SolanaOpportunityReview({
   result,
   balanceLamports,
+  executionStage,
+  executionError,
+  onStake,
   onBack,
 }: {
   result: SolanaStrategyResult;
   balanceLamports: bigint;
+  executionStage:
+    | 'preparing'
+    | 'awaiting-approval'
+    | 'submitted'
+    | 'confirming'
+    | 'confirmed'
+    | 'rejected'
+    | 'failed'
+    | null;
+  executionError: string;
+  onStake: () => void;
   onBack: () => void;
 }) {
-  const [notice, setNotice] = useState('');
   const recommendation = result.recommendation;
   if (!recommendation) return null;
   const { opportunity, allocationPercent } = recommendation;
+  const isJitoSol = opportunity.id === 'jito-sol-liquid-staking';
+  const executionLabel =
+    executionStage === 'preparing'
+      ? 'Preparing transaction'
+      : executionStage === 'awaiting-approval'
+        ? 'Awaiting wallet approval'
+        : executionStage === 'submitted'
+          ? 'Transaction submitted'
+          : executionStage === 'confirming'
+            ? 'Confirming on Solana'
+            : executionStage === 'confirmed'
+              ? 'Transaction confirmed'
+              : executionStage === 'rejected'
+                ? 'Wallet approval rejected'
+                : executionStage === 'failed'
+                  ? 'Transaction failed'
+                  : null;
+  const actionInFlight =
+    executionStage === 'preparing' ||
+    executionStage === 'awaiting-approval' ||
+    executionStage === 'submitted' ||
+    executionStage === 'confirming';
   return (
     <section className="solana-opportunity-review" aria-labelledby="solana-review-title">
       <p className="solana-overline">Review opportunity</p>
-      <h1 id="solana-review-title">Review before any action.</h1>
+      <h1 id="solana-review-title">Review before you stake.</h1>
+      <section className="solana-review-product" aria-label="Selected opportunity">
+        <span>{opportunity.protocol}</span>
+        <h2>{opportunity.name}</h2>
+      </section>
       <dl className="solana-review-facts">
         <div>
-          <dt>Protocol</dt>
-          <dd>{opportunity.protocol}</dd>
-        </div>
-        <div>
-          <dt>Opportunity</dt>
-          <dd>{opportunity.name}</dd>
-        </div>
-        <div>
-          <dt>Allocation</dt>
-          <dd>{allocationPercent}% of SOL</dd>
+          <dt>Proposed allocation</dt>
+          <dd>{allocationPercent}%</dd>
         </div>
         <div>
           <dt>Approximate amount</dt>
-          <dd>{formatSol(allocationAmount(balanceLamports, allocationPercent))} SOL</dd>
+          <dd>≈ {formatSol(allocationAmount(balanceLamports, allocationPercent))} SOL</dd>
         </div>
         <div>
           <dt>Risk</dt>
@@ -157,24 +187,110 @@ export function SolanaOpportunityReview({
       <section className="solana-control-note">
         <h2>What happens next</h2>
         <p>
-          When a supported protocol path is configured, WealthBuilder will prepare this opportunity
-          for your explicit approval. No transaction will be sent now.
+          Your SOL will be deposited into the JitoSOL stake pool. In return, your wallet receives
+          JitoSOL.
         </p>
       </section>
-      <button
-        type="button"
-        className="solana-primary-action"
-        onClick={() => setNotice('This opportunity is ready for the next execution milestone.')}
-      >
-        Continue <ArrowRight size={18} aria-hidden="true" />
-      </button>
-      {notice && (
-        <p className="solana-flow-notice" role="status">
-          {notice}
-        </p>
+      <section className="solana-approval-note" aria-label="Approval control">
+        <ShieldCheck size={19} aria-hidden="true" />
+        <div>
+          <strong>You approve before anything happens.</strong>
+          <span>WealthBuilder cannot move funds without your wallet signature.</span>
+        </div>
+      </section>
+      {isJitoSol ? (
+        <>
+          <button
+            type="button"
+            className="solana-primary-action"
+            onClick={onStake}
+            disabled={actionInFlight}
+          >
+            {actionInFlight ? executionLabel : executionStage ? 'Try again' : 'Approve & stake'}{' '}
+            <ArrowRight size={18} aria-hidden="true" />
+          </button>
+          {executionLabel && (
+            <p className="solana-execution-status" role="status">
+              {actionInFlight && (
+                <RefreshCw size={16} className="solana-loading-icon" aria-hidden="true" />
+              )}
+              {executionLabel}
+            </p>
+          )}
+          {executionError && (
+            <p className="solana-flow-error" role="alert">
+              {executionError}
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="solana-flow-error">This opportunity does not have an execution path yet.</p>
       )}
       <button type="button" className="solana-text-button" onClick={onBack}>
         <ArrowLeft size={16} aria-hidden="true" /> Back to strategy
+      </button>
+    </section>
+  );
+}
+
+export function SolanaStrategyActive({
+  depositedLamports,
+  signature,
+  remainingSolLamports,
+  jitoSolLamports,
+  refreshMessage,
+  onPortfolio,
+}: {
+  depositedLamports: bigint;
+  signature: string;
+  remainingSolLamports: bigint | null;
+  jitoSolLamports: bigint | null;
+  refreshMessage: string | null;
+  onPortfolio: () => void;
+}) {
+  const explorerUrl = `https://explorer.solana.com/tx/${signature}?cluster=devnet`;
+  return (
+    <section className="solana-strategy-active" aria-labelledby="solana-active-title">
+      <span className="solana-active-mark">
+        <Check size={24} aria-hidden="true" />
+      </span>
+      <p className="solana-overline">Strategy active</p>
+      <h1 id="solana-active-title">Your strategy is active.</h1>
+      <section className="solana-active-product">
+        <span>Jito</span>
+        <h2>JitoSOL Liquid Staking</h2>
+        <p>Active</p>
+      </section>
+      <dl className="solana-active-facts">
+        <div>
+          <dt>Allocated</dt>
+          <dd>{formatSol(depositedLamports)} SOL</dd>
+        </div>
+        <div>
+          <dt>JitoSOL position</dt>
+          <dd>
+            {jitoSolLamports === null ? 'Unavailable' : `${formatSol(jitoSolLamports)} JitoSOL`}
+          </dd>
+        </div>
+        <div>
+          <dt>SOL remaining</dt>
+          <dd>
+            {remainingSolLamports === null
+              ? 'Refreshing…'
+              : `${formatSol(remainingSolLamports)} SOL`}
+          </dd>
+        </div>
+      </dl>
+      {refreshMessage && <p className="solana-refresh-warning">{refreshMessage}</p>}
+      <a href={explorerUrl} target="_blank" rel="noreferrer" className="solana-transaction-link">
+        View transaction {shortenSignature(signature)} <ExternalLink size={15} aria-hidden="true" />
+      </a>
+      <section className="solana-control-note">
+        <h2>You stay in control</h2>
+        <p>Your wallet remains self-custodial. Future actions require your approval.</p>
+      </section>
+      <button type="button" className="solana-primary-action" onClick={onPortfolio}>
+        Return to portfolio <ArrowRight size={18} aria-hidden="true" />
       </button>
     </section>
   );
@@ -200,4 +316,8 @@ function formatRisk(value: string) {
 
 function formatLiquidity(value: string) {
   return value[0] + value.slice(1).toLowerCase();
+}
+
+function shortenSignature(value: string) {
+  return `${value.slice(0, 6)}…${value.slice(-6)}`;
 }

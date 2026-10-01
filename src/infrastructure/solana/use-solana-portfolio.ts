@@ -8,7 +8,7 @@ import { useSolanaClient, useSolanaCluster } from './solana-provider';
 export type SolanaPortfolioState = Readonly<{
   portfolio: Portfolio | null;
   status: 'idle' | 'loading' | 'ready' | 'error';
-  refresh: () => void;
+  refresh: () => Promise<Portfolio | null>;
 }>;
 
 export function useSolanaPortfolio(walletAddress: string | null): SolanaPortfolioState {
@@ -17,34 +17,28 @@ export function useSolanaPortfolio(walletAddress: string | null): SolanaPortfoli
   const service = useMemo(() => solanaPortfolioService(client.rpc, cluster), [client, cluster]);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [status, setStatus] = useState<SolanaPortfolioState['status']>('idle');
-  const [refreshCount, setRefreshCount] = useState(0);
-  const refresh = useCallback(() => setRefreshCount((count) => count + 1), []);
-
-  useEffect(() => {
+  const refresh = useCallback(async (): Promise<Portfolio | null> => {
     if (!walletAddress) {
       setPortfolio(null);
       setStatus('idle');
-      return;
+      return null;
     }
-    let current = true;
     setStatus('loading');
-    void service
-      .refresh(walletAddress, solanaChain(cluster))
-      .then((next) => {
-        if (!current) return;
-        setPortfolio(next);
-        setStatus('ready');
-      })
-      .catch(() => {
-        if (current) {
-          setPortfolio(null);
-          setStatus('error');
-        }
-      });
-    return () => {
-      current = false;
-    };
-  }, [cluster, refreshCount, service, walletAddress]);
+    try {
+      const next = await service.refresh(walletAddress, solanaChain(cluster));
+      setPortfolio(next);
+      setStatus('ready');
+      return next;
+    } catch {
+      setPortfolio(null);
+      setStatus('error');
+      return null;
+    }
+  }, [cluster, service, walletAddress]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   return { portfolio, status, refresh };
 }

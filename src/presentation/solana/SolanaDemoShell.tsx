@@ -1,11 +1,17 @@
 'use client';
 
 import { ArrowRight, RefreshCw, Wallet } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { SolanaStrategyResult } from '@/application/solana-strategy-service';
+import {
+  type JitoSolConfirmation,
+  type JitoSolExecutionStage,
+} from '@/infrastructure/solana/jito-sol-executor';
 import type { SolanaPortfolioState } from '@/infrastructure/solana/use-solana-portfolio';
 import type { SolanaWalletConnection } from '@/infrastructure/solana/use-solana-wallet';
 import type { SolanaCluster } from '@/infrastructure/solana/solana-config';
+import { useJitoSolBalance } from '@/infrastructure/solana/use-jito-sol-balance';
+import { useJitoSolExecutor } from '@/infrastructure/solana/use-jito-sol-executor';
 import {
   defaultSolanaStrategyPreferences,
   loadSolanaStrategyPreferences,
@@ -15,11 +21,19 @@ import {
 import { SolanaStrategyPreferences } from './SolanaStrategyPreferences';
 import {
   SolanaOpportunityReview,
+  SolanaStrategyActive,
   SolanaStrategyRecommendation,
 } from './SolanaStrategyRecommendation';
 import { SolanaWalletTools } from './SolanaWalletTools';
 
-type DemoState = 'portfolio' | 'preferences' | 'recommendation' | 'review';
+type DemoState = 'portfolio' | 'preferences' | 'recommendation' | 'review' | 'active';
+
+type ActiveStrategy = Readonly<{
+  confirmation: JitoSolConfirmation;
+  remainingSolLamports: bigint | null;
+  jitoSolLamports: bigint | null;
+  refreshMessage: string | null;
+}>;
 
 export function SolanaDemoShell({
   wallet,
@@ -39,6 +53,12 @@ export function SolanaDemoShell({
   const [strategy, setStrategy] = useState<SolanaStrategyResult | null>(null);
   const [findingStrategy, setFindingStrategy] = useState(false);
   const [strategyError, setStrategyError] = useState('');
+  const [executionStage, setExecutionStage] = useState<JitoSolExecutionStage | null>(null);
+  const [executionError, setExecutionError] = useState('');
+  const [activeStrategy, setActiveStrategy] = useState<ActiveStrategy | null>(null);
+  const executionInFlight = useRef(false);
+  const jitoSolBalance = useJitoSolBalance(wallet.address);
+  const jitoSolExecutor = useJitoSolExecutor();
 
   useEffect(() => {
     try {
@@ -59,6 +79,13 @@ export function SolanaDemoShell({
     }
   }, [preferences, preferencesLoaded]);
 
+  useEffect(() => {
+    if (!wallet.address && executionInFlight.current) {
+      setExecutionStage('failed');
+      setExecutionError('Your wallet disconnected. Reconnect to review and try again.');
+    }
+  }, [wallet.address]);
+
   const position = portfolio.portfolio?.positions[0];
   const balance = position ? formatSol(position.amount.value) : null;
   const network = `Solana ${cluster === 'devnet' ? 'Devnet' : 'Localnet'}`;
@@ -74,6 +101,10 @@ export function SolanaDemoShell({
 
   async function findStrategy() {
     if (!position || !preferences.timeline || !preferences.risk) return;
+    if (!wallet.networkReady) {
+      setStrategyError('Switch your wallet to Solana Devnet before finding a strategy.');
+      return;
+    }
     setFindingStrategy(true);
     setStrategyError('');
     try {
@@ -98,6 +129,50 @@ export function SolanaDemoShell({
       );
     } finally {
       setFindingStrategy(false);
+    }
+  }
+
+  async function stakeRecommendation() {
+    const recommendation = strategy?.recommendation;
+    if (executionInFlight.current) return;
+    if (!recommendation || !wallet.address) {
+      setExecutionStage('failed');
+      setExecutionError('Reconnect your wallet before approving this opportunity.');
+      return;
+    }
+    if (!wallet.networkReady) {
+      setExecutionStage('failed');
+      setExecutionError('Switch your wallet to Solana Devnet before approving this opportunity.');
+      return;
+    }
+    executionInFlight.current = true;
+    setExecutionError('');
+    try {
+      const nextConfirmation = await jitoSolExecutor.execute({
+        opportunityId: recommendation.opportunity.id,
+        allocationPercent: recommendation.allocationPercent,
+        onStage: setExecutionStage,
+      });
+      const [refreshedPortfolio, refreshedJitoSol] = await Promise.all([
+        portfolio.refresh(),
+        jitoSolBalance.refresh(),
+      ]);
+      setActiveStrategy({
+        confirmation: nextConfirmation,
+        remainingSolLamports: refreshedPortfolio?.positions[0]?.amount.value ?? null,
+        jitoSolLamports: refreshedJitoSol,
+        refreshMessage:
+          refreshedPortfolio && refreshedJitoSol !== null
+            ? null
+            : 'Your transaction is confirmed, but one portfolio balance could not be refreshed yet.',
+      });
+      setState('active');
+    } catch (error) {
+      setExecutionError(
+        error instanceof Error ? error.message : 'We could not complete this JitoSOL deposit.',
+      );
+    } finally {
+      executionInFlight.current = false;
     }
   }
 
@@ -183,7 +258,19 @@ export function SolanaDemoShell({
           <SolanaOpportunityReview
             result={strategy}
             balanceLamports={position.amount.value}
+            executionStage={executionStage}
+            executionError={executionError}
+            onStake={() => void stakeRecommendation()}
             onBack={() => setState('recommendation')}
+          />
+        ) : state === 'active' && activeStrategy ? (
+          <SolanaStrategyActive
+            depositedLamports={activeStrategy.confirmation.depositedLamports}
+            signature={activeStrategy.confirmation.signature}
+            remainingSolLamports={activeStrategy.remainingSolLamports}
+            jitoSolLamports={activeStrategy.jitoSolLamports}
+            refreshMessage={activeStrategy.refreshMessage}
+            onPortfolio={() => setState('portfolio')}
           />
         ) : state === 'preferences' && balance ? (
           <SolanaStrategyPreferences
@@ -236,11 +323,16 @@ export function SolanaDemoShell({
               <button
                 type="button"
                 className="solana-primary-action"
-                disabled={portfolio.status !== 'ready' || !balance}
+                disabled={portfolio.status !== 'ready' || !balance || !wallet.networkReady}
                 onClick={() => setState('preferences')}
               >
                 Build my strategy <ArrowRight size={18} aria-hidden="true" />
               </button>
+            )}
+            {!wallet.networkReady && (
+              <p className="solana-flow-error" role="alert">
+                Switch your wallet to Solana Devnet to continue.
+              </p>
             )}
             <SolanaWalletTools
               address={wallet.address}

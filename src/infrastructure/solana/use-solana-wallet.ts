@@ -9,6 +9,7 @@ import {
   useWallets,
 } from '@solana/kit-plugin-wallet/react';
 import { useCallback } from 'react';
+import { solanaWalletChain } from './solana-config';
 import { useSolanaClient, useSolanaCluster } from './solana-provider';
 
 export type SolanaWalletConnection = Readonly<{
@@ -16,6 +17,7 @@ export type SolanaWalletConnection = Readonly<{
   cluster: string;
   isReady: boolean;
   canSignTransactions: boolean;
+  networkReady: boolean;
   wallets: readonly Readonly<{ name: string; icon?: string }>[];
   connect: (walletName: string) => Promise<void>;
   disconnect: () => Promise<void>;
@@ -47,6 +49,8 @@ export function useSolanaWallet(): SolanaWalletConnection {
     cluster,
     isReady,
     canSignTransactions: connectedWallet?.signer !== null && connectedWallet?.signer !== undefined,
+    networkReady:
+      !connectedWallet || connectedWallet.wallet.chains.includes(solanaWalletChain(cluster)),
     wallets: wallets.map((wallet) => ({ name: wallet.name, icon: wallet.icon })),
     connect,
     disconnect: async () => disconnectWallet(),
