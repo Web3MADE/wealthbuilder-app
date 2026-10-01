@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     if (!(error instanceof AIProviderConfigurationError)) throw error;
   }
   const result = await new SolanaStrategyService(
-    new ConfiguredSolanaOpportunityCatalogue(),
+    new ConfiguredSolanaOpportunityCatalogue(parsed.data.cluster),
     explainer,
   ).find({
     preferences: {

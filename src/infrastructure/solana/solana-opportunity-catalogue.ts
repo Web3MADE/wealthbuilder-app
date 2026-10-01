@@ -1,11 +1,12 @@
 import type { SolanaOpportunity } from '@/domain';
 import type { SolanaOpportunityRepositoryPort } from '@/application/interfaces/solana-opportunity-repository';
+import type { SolanaCluster } from './solana-config';
+import { jitoSolOpportunity } from './jito-sol-config';
 
-/**
- * Add reviewed, real Solana opportunities here only after a product and execution
- * path have been selected. The Sunday MVP deliberately ships with no live entry.
- */
-export const curatedSolanaOpportunities: readonly SolanaOpportunity[] = [];
+export function curatedSolanaOpportunities(cluster: SolanaCluster): readonly SolanaOpportunity[] {
+  const jito = jitoSolOpportunity(cluster);
+  return jito ? [jito] : [];
+}
 
 /**
  * Explicitly non-live fixture for local UI/manual testing. It is excluded unless
@@ -30,13 +31,14 @@ export const developmentSolanaOpportunityFixtures: readonly SolanaOpportunity[] 
 
 export class ConfiguredSolanaOpportunityCatalogue implements SolanaOpportunityRepositoryPort {
   constructor(
+    private readonly cluster: SolanaCluster,
     private readonly includeDevelopmentFixtures = process.env.NODE_ENV === 'development' &&
       process.env.SOLANA_ENABLE_DEVELOPMENT_OPPORTUNITY_FIXTURES === 'true',
   ) {}
 
   async listActive(): Promise<readonly SolanaOpportunity[]> {
     return [
-      ...curatedSolanaOpportunities,
+      ...curatedSolanaOpportunities(this.cluster),
       ...(this.includeDevelopmentFixtures ? developmentSolanaOpportunityFixtures : []),
     ].filter((opportunity) => opportunity.enabled);
   }
