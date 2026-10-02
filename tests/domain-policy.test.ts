@@ -9,6 +9,7 @@ import {
   type Portfolio,
   type Position,
   type ProposedAction,
+  type SupplyAction,
 } from '../src/domain';
 
 const now = new Date('2026-09-19T00:00:00.000Z');
@@ -59,7 +60,7 @@ const policy = (overrides: Partial<PersonalWealthPolicy> = {}): PersonalWealthPo
   ...overrides,
 });
 
-const supply = (amountMicros: bigint, overrides: Partial<ProposedAction> = {}): ProposedAction => ({
+const supply = (amountMicros: bigint, overrides: Partial<SupplyAction> = {}): SupplyAction => ({
   id: 'action-1',
   type: 'SUPPLY',
   walletId: 'wallet-1',

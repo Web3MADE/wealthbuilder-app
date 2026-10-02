@@ -1,5 +1,5 @@
-import { StrategyScreen } from '@/presentation/wealth/StrategyScreen';
+import { redirect } from 'next/navigation';
 
 export default function StrategyPage() {
-  return <StrategyScreen />;
+  redirect('/solana');
 }

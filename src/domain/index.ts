@@ -5,6 +5,8 @@ export * from './policy/evaluate';
 export * from './actions/index';
 export * from './recommendations/index';
 export * from './planning/index';
+export * from './opportunities/index';
+export * from './opportunities/match';
 export * from './execution/index';
 export * from './audit/index';
 export * from './errors/index';

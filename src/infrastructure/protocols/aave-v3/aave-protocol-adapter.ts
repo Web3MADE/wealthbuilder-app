@@ -57,6 +57,7 @@ export class AaveV3ProtocolAdapter implements ProtocolPort {
   supports(query: CapabilityQuery): boolean {
     return this.describeCapabilities().some(
       (capability) =>
+        query.action === 'SUPPLY' &&
         capability.chain.id === query.chain.id &&
         capability.supportedActions.includes(query.action) &&
         capability.supportedAssetIds.includes(query.assetId) &&
@@ -68,6 +69,7 @@ export class AaveV3ProtocolAdapter implements ProtocolPort {
     authorization: ExecutionAuthorization,
   ): Promise<ExecutionPreview> {
     if (
+      action.type !== 'SUPPLY' ||
       !this.supports({
         action: action.type,
         assetId: action.asset.id,

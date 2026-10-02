@@ -4,9 +4,10 @@ import type {
   ExecutionPreview,
   ExecutionSubmission,
   ProposedAction,
+  ActionType,
 } from '@/domain';
 export type CapabilityQuery = Readonly<{
-  action: 'SUPPLY';
+  action: ActionType;
   assetId: string;
   chain: ChainRef;
   authorization: ExecutionAuthorization['mode'];

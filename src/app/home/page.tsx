@@ -1,5 +1,5 @@
-import { ExistingUserHome } from '@/presentation/home/ExistingUserHome';
+import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  return <ExistingUserHome />;
+  redirect('/solana');
 }

@@ -1,0 +1,1104 @@
+.solana-demo-page {
+  --solana-bg: #091312;
+  --solana-panel: #121d1b;
+  --solana-panel-soft: #182522;
+  --solana-line: #2a3c38;
+  --solana-muted: #a7b5af;
+  --solana-mint: #8cf3ad;
+  min-height: 100svh;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 50% -10%, rgb(48 104 74 / 22%), transparent 42%), var(--solana-bg);
+  color: #f5f9f6;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.solana-demo-shell {
+  width: min(100%, 420px);
+  min-height: calc(100svh - 32px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.solana-demo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 46px;
+  margin-bottom: 20px;
+}
+
+.solana-demo-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #f5f9f6;
+  font-size: 17px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.solana-demo-brand-mark,
+.solana-entry-mark,
+.solana-asset-mark,
+.solana-summary-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+}
+
+.solana-demo-brand-mark {
+  width: 31px;
+  height: 31px;
+  background: var(--solana-mint);
+  color: #0b1711;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.solana-network-chip {
+  color: var(--solana-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.solana-entry-state,
+.solana-portfolio-home,
+.solana-preferences,
+.solana-strategy-summary,
+.solana-strategy-loading,
+.solana-strategy-recommendation,
+.solana-strategy-unavailable,
+.solana-opportunity-review,
+.solana-strategy-active {
+  display: grid;
+  gap: 16px;
+}
+
+.solana-review-product,
+.solana-active-product {
+  display: grid;
+  gap: 5px;
+  padding: 18px;
+  border: 1px solid rgb(140 243 173 / 22%);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgb(37 78 57 / 60%), var(--solana-panel));
+}
+
+.solana-review-product > span,
+.solana-active-product > span {
+  color: var(--solana-mint);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.solana-review-product h2,
+.solana-active-product h2 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.03em;
+}
+
+.solana-review-product p {
+  margin: 0;
+  color: var(--solana-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.solana-active-product p {
+  width: fit-content;
+  margin: 3px 0 0;
+  padding: 4px 8px;
+  border-radius: 99px;
+  background: rgb(140 243 173 / 14%);
+  color: var(--solana-mint);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.solana-approval-note,
+.solana-execution-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 15px;
+  border: 1px solid rgb(140 243 173 / 18%);
+  border-radius: 14px;
+  background: rgb(140 243 173 / 6%);
+}
+
+.solana-approval-note > svg,
+.solana-execution-status > svg {
+  flex: none;
+  color: var(--solana-mint);
+}
+
+.solana-approval-note div {
+  display: grid;
+  gap: 3px;
+}
+
+.solana-approval-note strong {
+  font-size: 13px;
+}
+
+.solana-approval-note span,
+.solana-execution-status {
+  color: var(--solana-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.solana-execution-status {
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  color: #e4efe9;
+  font-weight: 700;
+}
+
+.solana-strategy-active {
+  align-content: start;
+  padding-bottom: 8px;
+}
+
+.solana-active-mark {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--solana-mint);
+  color: #0a1710;
+}
+
+.solana-strategy-active h1 {
+  max-width: 360px;
+  margin: -11px 0 0;
+  font-size: clamp(2rem, 8vw, 2.55rem);
+  line-height: 1.04;
+  letter-spacing: -0.055em;
+}
+
+.solana-active-facts {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--solana-line);
+  border-radius: 17px;
+  background: var(--solana-panel);
+}
+
+.solana-active-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px;
+  border-bottom: 1px solid var(--solana-line);
+}
+
+.solana-active-facts > div:last-child {
+  border-bottom: 0;
+}
+
+.solana-active-facts dt {
+  color: var(--solana-muted);
+  font-size: 13px;
+}
+
+.solana-active-facts dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.solana-transaction-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  color: var(--solana-mint);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.solana-transaction-link:hover {
+  text-decoration: underline;
+}
+
+.solana-refresh-warning {
+  margin: -8px 0 0;
+  color: #ffd38a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.solana-entry-state {
+  min-height: min(520px, calc(100svh - 126px));
+  align-content: center;
+}
+
+.solana-entry-mark {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 2px;
+  background: #1b3028;
+  color: var(--solana-mint);
+}
+
+.solana-overline {
+  margin: 0;
+  color: var(--solana-mint);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.solana-entry-state h1,
+.solana-portfolio-home h1,
+.solana-preferences h1,
+.solana-strategy-summary h1 {
+  margin: 0;
+  font-size: clamp(2rem, 8.5vw, 2.45rem);
+  line-height: 1.04;
+  letter-spacing: -0.05em;
+}
+
+.solana-entry-state > p:not(.solana-overline),
+.solana-flow-description,
+.solana-entry-muted {
+  max-width: 390px;
+  margin: -9px 0 0;
+  color: var(--solana-muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.solana-match-intro {
+  margin: -5px 0 2px;
+  color: var(--solana-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.solana-other-strategies {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.solana-other-strategies > div {
+  display: grid;
+  gap: 4px;
+}
+
+.solana-other-strategies h2 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: -0.025em;
+}
+
+.solana-strategy-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+  border: 1px solid rgb(140 243 173 / 12%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 2%);
+}
+
+.solana-strategy-preview h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.solana-strategy-preview p,
+.solana-preview-disclaimer {
+  margin: 4px 0 0;
+  color: var(--solana-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.solana-strategy-preview button {
+  flex: none;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--solana-line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--solana-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.solana-preview-disclaimer {
+  margin-top: 0;
+}
+
+.solana-connect-options {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.solana-primary-action,
+.solana-secondary-action,
+.solana-text-button,
+.solana-disconnect {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 0;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.solana-primary-action {
+  min-height: 54px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--solana-mint);
+  color: #0a1710;
+  font-size: 15px;
+}
+
+.solana-primary-action:hover:not(:disabled) {
+  background: #b0fac5;
+}
+
+.solana-primary-action:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.solana-primary-action:disabled {
+  cursor: wait;
+  opacity: 0.52;
+}
+
+.solana-connect-options .solana-primary-action {
+  justify-content: flex-start;
+}
+
+.solana-connect-options .solana-primary-action svg:last-child {
+  margin-left: auto;
+}
+
+.solana-connect-options img {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+}
+
+.solana-flow-error {
+  margin: 0;
+  color: #ffb1a6;
+  font-size: 14px;
+}
+
+.solana-loading-icon {
+  color: var(--solana-mint);
+  animation: solana-spin 1.2s linear infinite;
+}
+
+.solana-greeting {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.solana-greeting h1 {
+  margin-top: 8px;
+  font-size: clamp(1.9rem, 7.5vw, 2.35rem);
+}
+
+.solana-disconnect,
+.solana-text-button {
+  padding: 4px 0;
+  background: transparent;
+  color: var(--solana-muted);
+  font-size: 12px;
+}
+
+.solana-disconnect:hover,
+.solana-text-button:hover {
+  color: var(--solana-mint);
+}
+
+.solana-balance-card {
+  display: grid;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid var(--solana-line);
+  border-radius: 19px;
+  background: linear-gradient(145deg, #1b2a25, var(--solana-panel));
+}
+
+.solana-balance-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ced9d3;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.solana-balance-card-top > span:last-child {
+  margin-left: auto;
+  color: var(--solana-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.solana-asset-mark {
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(145deg, #b79aff, #6d58c5);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.solana-balance-card > strong {
+  overflow-wrap: anywhere;
+  font-size: clamp(2.35rem, 10vw, 3.1rem);
+  line-height: 0.95;
+  letter-spacing: -0.065em;
+}
+
+.solana-wallet-detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid rgb(174 205 191 / 18%);
+  color: var(--solana-muted);
+  font-size: 12px;
+}
+
+.solana-wallet-detail code {
+  color: #d9e6de;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.solana-secondary-action {
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 16px;
+  border: 1px solid #3b5149;
+  border-radius: 13px;
+  background: #14201d;
+  color: #e7f0eb;
+  font-size: 14px;
+}
+
+.solana-secondary-action:hover {
+  border-color: #678679;
+}
+
+.solana-flow-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--solana-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.solana-flow-progress > div {
+  display: flex;
+  gap: 5px;
+}
+
+.solana-flow-progress i {
+  display: block;
+  width: 23px;
+  height: 4px;
+  border-radius: 99px;
+  background: #33443e;
+}
+
+.solana-flow-progress i.is-complete {
+  background: var(--solana-mint);
+}
+
+.solana-preferences,
+.solana-strategy-summary {
+  min-height: min(570px, calc(100svh - 126px));
+  align-content: start;
+}
+
+.solana-strategy-loading,
+.solana-strategy-recommendation,
+.solana-strategy-unavailable,
+.solana-opportunity-review {
+  min-height: min(570px, calc(100svh - 126px));
+  align-content: start;
+}
+
+.solana-strategy-loading {
+  padding-top: 48px;
+}
+
+.solana-strategy-loading h1,
+.solana-strategy-recommendation h1,
+.solana-strategy-unavailable h1,
+.solana-opportunity-review h1 {
+  margin: -5px 0 0;
+  font-size: clamp(1.9rem, 8vw, 2.35rem);
+  line-height: 1.1;
+  letter-spacing: -0.05em;
+}
+
+.solana-strategy-loading ul {
+  display: grid;
+  gap: 11px;
+  margin: 0;
+  padding: 0;
+  color: var(--solana-muted);
+  font-size: 14px;
+  list-style: none;
+}
+
+.solana-strategy-loading li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.solana-strategy-loading li::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--solana-mint);
+  content: '';
+}
+
+.solana-strategy-unavailable > p:not(.solana-overline) {
+  margin: -8px 0 0;
+  color: var(--solana-muted);
+  line-height: 1.5;
+}
+
+.solana-strategy-unavailable > .solana-text-button,
+.solana-strategy-recommendation > .solana-text-button,
+.solana-opportunity-review > .solana-text-button {
+  justify-self: center;
+}
+
+.solana-development-fixture {
+  margin: -10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #785f27;
+  border-radius: 10px;
+  background: #2a2417;
+  color: #f3cf85;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.solana-opportunity-card,
+.solana-allocation-card,
+.solana-explanation,
+.solana-control-note,
+.solana-review-facts {
+  border: 1px solid var(--solana-line);
+  border-radius: 16px;
+  background: var(--solana-panel);
+}
+
+.solana-opportunity-card {
+  display: grid;
+  gap: 7px;
+  padding: 18px;
+  border-color: rgb(140 243 173 / 26%);
+  background: linear-gradient(145deg, rgb(37 78 57 / 56%), var(--solana-panel));
+}
+
+.solana-opportunity-card > p,
+.solana-allocation-card > span {
+  margin: 0;
+  color: var(--solana-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.solana-opportunity-card h2,
+.solana-explanation h2,
+.solana-control-note h2 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.solana-opportunity-card h2 {
+  font-size: 21px;
+  letter-spacing: -0.035em;
+}
+
+.solana-opportunity-card > strong {
+  color: var(--solana-mint);
+  font-size: 13px;
+}
+
+.solana-opportunity-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.solana-opportunity-facts span {
+  padding: 5px 7px;
+  border: 1px solid #3b5149;
+  border-radius: 999px;
+  color: #d5e2dc;
+  font-size: 11px;
+}
+
+.solana-allocation-card {
+  display: grid;
+  gap: 3px;
+  padding: 18px;
+  background: linear-gradient(145deg, #20342a, #16251f);
+}
+
+.solana-allocation-card strong {
+  color: var(--solana-mint);
+  font-size: 46px;
+  line-height: 1;
+  letter-spacing: -0.07em;
+}
+
+.solana-allocation-card p {
+  margin: 5px 0 0;
+  color: var(--solana-muted);
+  font-size: 12px;
+}
+
+.solana-explanation,
+.solana-control-note {
+  display: grid;
+  gap: 12px;
+  padding: 17px;
+}
+
+.solana-explanation h3 {
+  margin: 0;
+  color: #edf7f0;
+  font-size: 15px;
+}
+
+.solana-explanation p,
+.solana-control-note p {
+  margin: 0;
+  color: var(--solana-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.solana-explanation ul {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.solana-explanation li {
+  display: flex;
+  gap: 8px;
+  color: #dce9e2;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.solana-explanation li svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--solana-mint);
+}
+
+.solana-risk-note {
+  padding-top: 12px;
+  border-top: 1px solid var(--solana-line);
+}
+
+.solana-explanation-unavailable {
+  display: grid;
+  gap: 8px;
+}
+
+.solana-control-note {
+  border-color: rgb(140 243 173 / 14%);
+  background: rgb(140 243 173 / 5%);
+}
+
+.solana-review-facts {
+  display: grid;
+  margin: 0;
+  overflow: hidden;
+}
+
+.solana-review-facts > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--solana-line);
+}
+
+.solana-review-facts > div:last-child {
+  border-bottom: 0;
+}
+
+.solana-review-facts dt {
+  color: var(--solana-muted);
+  font-size: 12px;
+}
+
+.solana-review-facts dd {
+  margin: 0;
+  color: #edf7f0;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.solana-preferences h1 {
+  margin-top: -10px;
+}
+
+.solana-preference-options {
+  display: grid;
+  gap: 9px;
+  margin-top: 2px;
+}
+
+.solana-preference-option {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+  min-height: 78px;
+  padding: 14px;
+  border: 1px solid var(--solana-line);
+  border-radius: 14px;
+  background: var(--solana-panel);
+  color: #f5f9f6;
+  text-align: left;
+  cursor: pointer;
+}
+
+.solana-preference-option:hover {
+  border-color: #557367;
+}
+
+.solana-preference-option.is-selected {
+  border-color: var(--solana-mint);
+  background: linear-gradient(145deg, #1d3028, #14221d);
+}
+
+.solana-preference-option-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.solana-preference-option-copy strong {
+  font-size: 15px;
+}
+
+.solana-preference-option-copy small {
+  color: var(--solana-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.solana-preference-option-check {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-left: auto;
+  border: 1px solid #61726b;
+  border-radius: 50%;
+  color: #0d1a14;
+  font-size: 12px;
+}
+
+.solana-preference-option.is-selected .solana-preference-option-check {
+  border-color: var(--solana-mint);
+  background: var(--solana-mint);
+}
+
+.solana-flow-actions {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.75fr) minmax(0, 1.25fr);
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.solana-flow-actions .solana-secondary-action,
+.solana-flow-actions .solana-primary-action {
+  width: 100%;
+}
+
+.solana-summary-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.solana-summary-mark {
+  width: 37px;
+  height: 37px;
+  margin-top: 2px;
+  background: #204632;
+  color: var(--solana-mint);
+}
+
+.solana-summary-heading h1 {
+  margin-top: 6px;
+  font-size: clamp(1.85rem, 7vw, 2.3rem);
+}
+
+.solana-plan-summary {
+  display: grid;
+  gap: 0;
+  margin: 4px 0 0;
+  border: 1px solid var(--solana-line);
+  border-radius: 15px;
+  overflow: hidden;
+  background: var(--solana-panel);
+}
+
+.solana-plan-summary > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 15px 16px;
+  border-bottom: 1px solid var(--solana-line);
+}
+
+.solana-plan-summary > div:last-child {
+  border-bottom: 0;
+}
+
+.solana-plan-summary dt {
+  color: var(--solana-muted);
+  font-size: 12px;
+}
+
+.solana-plan-summary dd {
+  margin: 0;
+  color: #edf7f0;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.solana-summary-portfolio {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 3px;
+  color: var(--solana-muted);
+  font-size: 13px;
+}
+
+.solana-summary-portfolio strong {
+  color: #eff9f2;
+  font-size: 17px;
+}
+
+.solana-flow-notice {
+  margin: -10px 0 0;
+  color: var(--solana-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.solana-strategy-summary > .solana-text-button {
+  justify-self: center;
+}
+
+.solana-wallet-tools {
+  margin-top: 5px;
+  border-top: 1px solid var(--solana-line);
+  color: var(--solana-muted);
+}
+
+.solana-wallet-tools summary {
+  padding: 18px 2px 2px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.solana-wallet-tools-content {
+  display: grid;
+  gap: 18px;
+  margin-top: 16px;
+}
+
+.solana-policy-panel,
+.solana-transfer-panel {
+  display: grid;
+  gap: 16px;
+  padding-top: 18px;
+  border-top: 1px solid var(--solana-line);
+}
+
+.solana-policy-panel h3,
+.solana-policy-panel p,
+.solana-transfer-panel h3,
+.solana-transfer-panel p {
+  margin: 5px 0 0;
+}
+
+.solana-wallet-eyebrow {
+  margin: 0;
+  color: var(--solana-mint);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.solana-policy-panel form,
+.solana-transfer-panel form,
+.solana-transfer-review {
+  display: grid;
+  gap: 12px;
+}
+
+.solana-policy-panel form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.solana-policy-panel label,
+.solana-transfer-panel label {
+  display: grid;
+  gap: 6px;
+  color: #c8d5ce;
+  font-size: 0.85rem;
+}
+
+.solana-policy-panel input:not([type='checkbox']),
+.solana-transfer-panel input {
+  padding: 9px 10px;
+  border: 1px solid #385248;
+  border-radius: 8px;
+  background: #091312;
+  color: inherit;
+}
+
+.solana-policy-panel label:has(input[type='checkbox']) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.solana-policy-panel button,
+.solana-transfer-panel button,
+.solana-wallet-secondary {
+  width: fit-content;
+  padding: 10px 14px;
+  border: 1px solid #3b574b;
+  border-radius: 10px;
+  background: #172923;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.solana-transfer-review dl {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.solana-transfer-review dt {
+  color: var(--solana-muted);
+  font-size: 0.8rem;
+}
+
+.solana-transfer-review dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.solana-transfer-error {
+  color: #ffb1a6;
+}
+
+.solana-policy-notice {
+  color: var(--solana-muted);
+}
+
+@keyframes solana-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (min-width: 720px) {
+  .solana-demo-page {
+    padding: 42px 24px;
+  }
+
+  .solana-demo-shell {
+    min-height: calc(100svh - 84px);
+  }
+
+  .solana-entry-state {
+    min-height: 580px;
+  }
+}
+
+@media (max-width: 380px) {
+  .solana-demo-page {
+    padding: 16px;
+  }
+
+  .solana-demo-shell {
+    min-height: calc(100svh - 32px);
+  }
+
+  .solana-entry-state h1,
+  .solana-portfolio-home h1,
+  .solana-preferences h1,
+  .solana-strategy-summary h1 {
+    font-size: 1.9rem;
+  }
+
+  .solana-policy-panel form {
+    grid-template-columns: 1fr;
+  }
+}

@@ -31,6 +31,11 @@ export const EnvironmentSchema = z.object({
   FUJI_RPC_URL: z.string().url().default(fujiRpcUrl),
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
   NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: z.string().min(1).optional(),
+  NEXT_PUBLIC_SOLANA_CLUSTER: z.enum(['devnet', 'localnet']).default('devnet'),
+  NEXT_PUBLIC_SOLANA_DEVNET_RPC_URL: z.string().url().optional(),
+  NEXT_PUBLIC_SOLANA_DEVNET_RPC_SUBSCRIPTIONS_URL: z.string().url().optional(),
+  NEXT_PUBLIC_SOLANA_LOCALNET_RPC_URL: z.string().url().optional(),
+  NEXT_PUBLIC_SOLANA_LOCALNET_RPC_SUBSCRIPTIONS_URL: z.string().url().optional(),
   JAW_API_KEY: z.string().min(1).optional(),
   NEXT_PUBLIC_JAW_API_KEY: z.string().min(1).optional(),
   JAW_DELEGATE_PRIVATE_KEY: z

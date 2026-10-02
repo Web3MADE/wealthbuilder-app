@@ -14,21 +14,31 @@ export type ActionState =
   | 'FAILED'
   | 'EXPIRED'
   | 'CANCELLED';
-export type SupplyAction = Readonly<{
+export type ActionType = 'SUPPLY' | 'TRANSFER';
+export type ActionBase = Readonly<{
   id: string;
-  type: 'SUPPLY';
   walletId: WalletId;
   chain: ChainRef;
   asset: AssetRef;
   amount: AtomicAmount;
   protocolId: ProtocolId;
-  protocolType: 'LENDING';
   policyVersion: number;
   portfolioId: string;
   expiresAt: Date;
   createdAt: Date;
 }>;
-export type ProposedAction = SupplyAction;
+export type SupplyAction = ActionBase &
+  Readonly<{
+    type: 'SUPPLY';
+    protocolType: 'LENDING';
+  }>;
+export type TransferAction = ActionBase &
+  Readonly<{
+    type: 'TRANSFER';
+    recipient: string;
+    protocolType: 'NATIVE';
+  }>;
+export type ProposedAction = SupplyAction | TransferAction;
 const transitions: Readonly<Record<ActionState, readonly ActionState[]>> = {
   GENERATED: ['VALIDATED', 'FAILED', 'EXPIRED', 'CANCELLED'],
   VALIDATED: ['DECIDED', 'FAILED', 'EXPIRED', 'CANCELLED'],

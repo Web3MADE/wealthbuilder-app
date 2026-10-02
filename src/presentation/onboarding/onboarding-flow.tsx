@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { PreferenceOption } from '@/presentation/preferences/PreferenceOption';
 import { canContinue, emptyPolicy, nextStep, type Policy } from './onboarding-state';
 import { DEV_MODE_KEY, ONBOARDING_KEY, resolveDevUserMode } from '@/presentation/dev/dev-user-mode';
 import { DevUserSwitcher } from '@/presentation/dev/DevUserSwitcher';
@@ -81,23 +82,21 @@ function ChoiceCard({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      className={`onb-choice ${selected ? 'is-selected' : ''}`}
-      aria-pressed={selected}
-      onClick={onClick}
-    >
-      <span className="onb-choice-icon" aria-hidden="true">
-        {icon}
-      </span>
-      <span className="onb-choice-copy">
-        <strong>{label}</strong>
-        <small>{detail}</small>
-      </span>
-      <span className="onb-choice-check" aria-hidden="true">
-        {selected ? '✓' : ''}
-      </span>
-    </button>
+    <PreferenceOption
+      label={label}
+      description={detail}
+      icon={icon}
+      selected={selected}
+      onSelect={onClick}
+      classNames={{
+        root: 'onb-choice',
+        icon: 'onb-choice-icon',
+        copy: 'onb-choice-copy',
+        label: '',
+        description: '',
+        check: 'onb-choice-check',
+      }}
+    />
   );
 }
 

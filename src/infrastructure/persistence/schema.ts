@@ -37,5 +37,5 @@ export const policies = pgTable(
     minimumLiquidStableReserveBps: integer('minimum_liquid_stable_reserve_bps').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.walletAddress, table.version] })],
+  (table) => [primaryKey({ columns: [table.walletAddress, table.chainId, table.version] })],
 );
