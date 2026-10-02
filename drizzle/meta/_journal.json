@@ -15,6 +15,13 @@
       "when": 1790401579792,
       "tag": "0001_nice_randall",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790947737802,
+      "tag": "0002_known_pixie",
+      "breakpoints": true
     }
   ]
 }

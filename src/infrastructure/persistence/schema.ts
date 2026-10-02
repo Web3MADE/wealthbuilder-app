@@ -39,3 +39,23 @@ export const policies = pgTable(
   },
   (table) => [primaryKey({ columns: [table.walletAddress, table.chainId, table.version] })],
 );
+
+export const planSubmissions = pgTable('plan_submissions', {
+  id: text('id').primaryKey(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  source: text('source').notNull(),
+  walletAddress: text('wallet_address'),
+  examplePreset: text('example_preset'),
+  goal: text('goal').notNull(),
+  timeHorizon: text('time_horizon').notNull(),
+  dropBehavior: text('drop_behavior').notNull(),
+  portfolioSnapshot: jsonb('portfolio_snapshot'),
+  status: text('status').notNull(),
+  strategy: text('strategy'),
+  allocation: jsonb('allocation'),
+  deterministicReasons: jsonb('deterministic_reasons'),
+  ruledOut: jsonb('ruled_out'),
+  aiExplanation: jsonb('ai_explanation'),
+  error: text('error'),
+});

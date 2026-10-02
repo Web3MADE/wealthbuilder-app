@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
 export function createDatabase(url: string) {
-  const client = postgres(url, { prepare: false, max: 5 });
+  const client = postgres(url, { prepare: false, max: 1 });
   return drizzle({ client });
 }
 

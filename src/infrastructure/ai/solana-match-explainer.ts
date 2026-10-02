@@ -30,9 +30,10 @@ export class GroqSolanaMatchExplainer implements SolanaMatchExplainerPort {
   ): Promise<SolanaMatchExplanation> {
     const { text } = await generateText({
       model: createGroq({ apiKey: this.config.apiKey })(this.config.model),
-      instructions: `You explain a deterministic WealthBuilder opportunity match. Return only strict JSON with headline, summary, reasons, and riskNote. You must explain only the supplied match. Do not change or restate a different protocol, opportunity, asset, allocation, risk classification, recipient, program, or execution route. Do not claim guaranteed returns, APY, market data, TVL, audits, safety scores, or historical performance. Do not use hype or trading language. State that the user reviews and approves any future action.`,
+      instructions: `You explain a deterministic WealthBuilder opportunity match. Return only strict JSON with headline, summary, reasons, and riskNote. You must explain only the supplied match, allocation, and exclusions. Do not change or restate a different protocol, opportunity, asset, allocation, risk classification, recipient, program, or execution route. Do not claim guaranteed returns, APY, market data, TVL, audits, safety scores, or historical performance. Do not use hype or trading language. State that this is a suggested target allocation, not a complete portfolio audit.`,
       prompt: JSON.stringify({
         userProfile: input.preferences,
+        planSuitability: input.planSuitability,
         currentSolBalanceLamports: input.solBalanceLamports.toString(),
         selectedOpportunity: {
           id: input.selectedOpportunity.id,
@@ -42,12 +43,15 @@ export class GroqSolanaMatchExplainer implements SolanaMatchExplainerPort {
           category: input.selectedOpportunity.category,
           riskLevel: input.selectedOpportunity.riskLevel,
           liquidity: input.selectedOpportunity.liquidity,
+          leverage: input.selectedOpportunity.leverage,
           description: input.selectedOpportunity.description,
           whyItExists: input.selectedOpportunity.whyItExists,
           isDevelopmentFixture: input.selectedOpportunity.isDevelopmentFixture,
         },
         deterministicReasons: input.deterministicReasons,
         proposedAllocationPercent: input.allocationPercent,
+        allocation: input.allocation,
+        ruledOut: input.ruledOut,
       }),
       maxOutputTokens: 500,
     });

@@ -1,4 +1,10 @@
-import type { SolanaOpportunity, SolanaStrategyPreferences } from '@/domain';
+import type {
+  PlanAllocation,
+  PlanSuitability,
+  RuledOutStrategy,
+  SolanaOpportunity,
+  SolanaStrategyPreferences,
+} from '@/domain';
 
 export type SolanaMatchExplanation = Readonly<{
   headline: string;
@@ -15,6 +21,9 @@ export interface SolanaMatchExplainerPort {
       selectedOpportunity: SolanaOpportunity;
       deterministicReasons: readonly string[];
       allocationPercent: number;
+      planSuitability?: PlanSuitability;
+      allocation?: readonly PlanAllocation[];
+      ruledOut?: readonly RuledOutStrategy[];
     }>,
   ): Promise<SolanaMatchExplanation>;
 }
