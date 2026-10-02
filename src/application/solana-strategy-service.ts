@@ -1,6 +1,7 @@
 import {
   matchSolanaOpportunities,
   type SolanaOpportunity,
+  type SolanaPortfolioComposition,
   type SolanaStrategyPreferences,
 } from '@/domain';
 import type {
@@ -34,6 +35,7 @@ export class SolanaStrategyService {
     input: Readonly<{
       preferences: SolanaStrategyPreferences;
       solBalanceLamports: bigint;
+      portfolioComposition?: SolanaPortfolioComposition;
     }>,
   ): Promise<SolanaStrategyResult> {
     const match = matchSolanaOpportunities({

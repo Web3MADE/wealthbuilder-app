@@ -3,6 +3,7 @@ import type {
   SolanaOpportunityLiquidity,
   SolanaOpportunityMatch,
   SolanaOpportunityRiskLevel,
+  SolanaPortfolioComposition,
   SolanaStrategyPreferences,
 } from './index';
 
@@ -57,11 +58,19 @@ function goalScore(opportunity: SolanaOpportunity, preferences: SolanaStrategyPr
   if (preferences.goal === 'preserve-crypto') {
     return liquidityRank(opportunity.liquidity) * 10 - riskRank[opportunity.riskLevel] * 4;
   }
-  if (preferences.goal === 'growth') return riskRank[opportunity.riskLevel] * 10;
+  if (preferences.goal === 'growth')
+    return riskRank[opportunity.riskLevel] * 10 + (opportunity.leverage ? 5 : 0);
 
   const categoryScore = { STAKING: 3, VAULT: 2, LENDING: 1 }[opportunity.category];
   const longTimelineBonus = preferences.timeline === '5-plus-years' ? 2 : 0;
   return categoryScore * 10 + longTimelineBonus + liquidityRank(opportunity.liquidity);
+}
+
+function compositionScore(
+  opportunity: SolanaOpportunity,
+  composition: SolanaPortfolioComposition,
+): number {
+  return opportunity.asset === composition.preferredAsset ? 100 : 0;
 }
 
 function matchingReasons(
@@ -85,22 +94,27 @@ function matchingReasons(
     `${opportunity.riskLevel.toLowerCase()} risk and ${opportunity.liquidity.toLowerCase()} liquidity fit your selected profile.`,
     timelineReason,
     goalReason,
-    `The recommendation is capped at ${allocationPercent}% of SOL, leaving SOL outside the planned allocation for control and network fees.`,
+    `The recommendation is capped at ${allocationPercent}% of your ${opportunity.asset === 'SOL' ? 'SOL' : 'stablecoin'} holdings.`,
   ];
 }
 
 /**
  * Transparent rules-based selection for the MVP. This never estimates returns,
- * allocates all assets, or allows leverage.
+ * allocates all assets, and only permits leverage for a Growth profile.
  */
 export function matchSolanaOpportunities(
   input: Readonly<{
     preferences: SolanaStrategyPreferences;
     solBalanceLamports: bigint;
+    portfolioComposition?: SolanaPortfolioComposition;
     opportunities: readonly SolanaOpportunity[];
   }>,
 ): SolanaOpportunityMatch {
   const { preferences, solBalanceLamports, opportunities } = input;
+  const portfolioComposition = input.portfolioComposition ?? {
+    availableAssets: solBalanceLamports > 0n ? (['SOL'] as const) : [],
+    preferredAsset: 'SOL' as const,
+  };
   if (!preferences.timeline || !preferences.risk)
     return {
       selectedOpportunity: null,
@@ -108,11 +122,11 @@ export function matchSolanaOpportunities(
       reasons: ['Choose a timeline and risk level before finding a match.'],
       allocationPercent: null,
     };
-  if (solBalanceLamports <= 0n)
+  if (portfolioComposition.availableAssets.length === 0)
     return {
       selectedOpportunity: null,
       eligibleOpportunities: [],
-      reasons: ['No SOL is currently available to allocate.'],
+      reasons: ['No supported SOL or stablecoin holding is currently available to allocate.'],
       allocationPercent: null,
     };
 
@@ -123,13 +137,17 @@ export function matchSolanaOpportunities(
     .filter(
       (opportunity) =>
         opportunity.enabled &&
-        !opportunity.leverage &&
-        opportunity.asset === 'SOL' &&
+        portfolioComposition.availableAssets.includes(opportunity.asset) &&
+        (!opportunity.leverage || risk === 'growth') &&
         riskRank[opportunity.riskLevel] <= maximumOpportunityRisk[risk] &&
         liquidity.includes(opportunity.liquidity),
     )
     .sort((left, right) => {
-      const score = goalScore(right, preferences) - goalScore(left, preferences);
+      const score =
+        compositionScore(right, portfolioComposition) +
+        goalScore(right, preferences) -
+        compositionScore(left, portfolioComposition) -
+        goalScore(left, preferences);
       return score || left.id.localeCompare(right.id);
     });
   const selectedOpportunity = eligibleOpportunities[0] ?? null;

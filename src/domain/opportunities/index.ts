@@ -15,13 +15,19 @@ export type SolanaStrategyPreferences = Readonly<{
 export type SolanaOpportunityCategory = 'STAKING' | 'LENDING' | 'VAULT';
 export type SolanaOpportunityRiskLevel = 'CONSERVATIVE' | 'BALANCED' | 'GROWTH';
 export type SolanaOpportunityLiquidity = 'LIQUID' | 'LIMITED' | 'LOCKED';
+export type SolanaOpportunityAsset = 'SOL' | 'STABLECOIN';
 
-/** A curated, configured SOL opportunity. Protocol execution remains outside this model. */
+export type SolanaPortfolioComposition = Readonly<{
+  availableAssets: readonly SolanaOpportunityAsset[];
+  preferredAsset: SolanaOpportunityAsset;
+}>;
+
+/** A curated Solana strategy. Protocol execution remains outside this model. */
 export type SolanaOpportunity = Readonly<{
   id: string;
   protocol: string;
   name: string;
-  asset: 'SOL';
+  asset: SolanaOpportunityAsset;
   category: SolanaOpportunityCategory;
   riskLevel: SolanaOpportunityRiskLevel;
   liquidity: SolanaOpportunityLiquidity;
