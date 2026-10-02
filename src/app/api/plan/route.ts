@@ -1,18 +1,22 @@
 import { address } from '@solana/kit';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { GoalIntentService } from '@/application/goal-intent-service';
 import { PlanSubmissionService } from '@/application/plan-submission-service';
 import { SolanaStrategyService } from '@/application/solana-strategy-service';
 import {
+  createPersonalWealthProfile,
   planDropBehaviors,
-  planGoals,
   planTimeHorizons,
+  personalWealthProfileLabels,
+  publicWalletSnapshotFacts,
   type PlanSuitability,
   type SolanaPortfolioComposition,
   type SolanaStrategyPreferences,
 } from '@/domain';
 import {
   AIProviderConfigurationError,
+  resolveGoalIntentClassifier,
   resolveSolanaMatchExplainer,
 } from '@/infrastructure/ai/ai-model-catalog';
 import { DrizzlePlanSubmissionRepository } from '@/infrastructure/persistence/drizzle-plan-submission-repository';
@@ -33,11 +37,21 @@ export const runtime = 'nodejs';
 const planRequestSchema = z
   .object({
     source: z.enum(['wallet', 'example']),
-    walletAddress: z.string().trim().min(1).optional(),
-    examplePreset: z.enum(planExamplePresets).optional(),
-    goal: z.enum(planGoals),
-    timeHorizon: z.enum(planTimeHorizons),
-    dropBehavior: z.enum(planDropBehaviors),
+    walletAddress: z.string().trim().optional(),
+    examplePreset: z
+      .enum(planExamplePresets, { errorMap: () => ({ message: 'Choose an example portfolio.' }) })
+      .optional(),
+    goalText: z
+      .string({ required_error: 'Tell us a little more about what you want from crypto.' })
+      .trim()
+      .min(3, 'Tell us a little more about what you want from crypto.')
+      .max(500, 'Tell us a little more about what you want from crypto.'),
+    timeHorizon: z.enum(planTimeHorizons, {
+      errorMap: () => ({ message: 'Choose when you may need this money.' }),
+    }),
+    dropBehavior: z.enum(planDropBehaviors, {
+      errorMap: () => ({ message: "Choose how you think you'd react to a large drop." }),
+    }),
   })
   .strict()
   .superRefine((value, context) => {
@@ -45,10 +59,14 @@ const planRequestSchema = z
       context.addIssue({
         code: 'custom',
         path: ['walletAddress'],
-        message: 'Enter a Solana wallet.',
+        message: 'Enter a Solana wallet address.',
       });
     if (value.source === 'example' && !value.examplePreset)
-      context.addIssue({ code: 'custom', path: ['examplePreset'], message: 'Choose an example.' });
+      context.addIssue({
+        code: 'custom',
+        path: ['examplePreset'],
+        message: 'Choose an example portfolio.',
+      });
   });
 
 let database: Database | null = null;
@@ -63,10 +81,7 @@ function submissionService() {
 export async function POST(request: Request) {
   const parsed = planRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success)
-    return NextResponse.json(
-      { error: 'Choose a wallet or example and answer all three questions.' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });
 
   const submissions = submissionService();
   if (!submissions)
@@ -75,13 +90,25 @@ export async function POST(request: Request) {
       { status: 503 },
     );
 
+  const goalIntent = await new GoalIntentService(resolveGoalClassifier()).resolve(
+    parsed.data.goalText,
+  );
+  if (!goalIntent)
+    return NextResponse.json(
+      {
+        error:
+          'Please describe your goal more clearly: growing wealth, keeping it safer, earning income, or more flexibility.',
+      },
+      { status: 400 },
+    );
+
   let submissionId: string;
   try {
     submissionId = await submissions.start({
       source: parsed.data.source,
       walletAddress: parsed.data.source === 'wallet' ? parsed.data.walletAddress! : null,
       examplePreset: parsed.data.source === 'example' ? parsed.data.examplePreset! : null,
-      goal: parsed.data.goal,
+      goal: goalIntent.goal,
       timeHorizon: parsed.data.timeHorizon,
       dropBehavior: parsed.data.dropBehavior,
     });
@@ -100,10 +127,11 @@ export async function POST(request: Request) {
     const solBalanceLamports = solToLamports(portfolio.solBalance);
     const portfolioComposition = derivePortfolioComposition(portfolio, solBalanceLamports);
     const suitability: PlanSuitability = {
-      goal: parsed.data.goal,
+      goal: goalIntent.goal,
       timeHorizon: parsed.data.timeHorizon,
       dropBehavior: parsed.data.dropBehavior,
     };
+    const wealthProfile = createPersonalWealthProfile(suitability, portfolio);
     const result = await new SolanaStrategyService(
       new PublicPlanSolanaOpportunityCatalogue(),
       resolveExplainer(),
@@ -112,11 +140,16 @@ export async function POST(request: Request) {
       solBalanceLamports,
       portfolioComposition,
       planSuitability: suitability,
+      goalText: parsed.data.goalText,
+      wealthProfile,
+      walletSnapshot: publicWalletSnapshotFacts(portfolio),
     });
     const recommendation = result.recommendation;
     const response = {
       portfolio,
       suitability,
+      goalText: parsed.data.goalText,
+      wealthProfile: { ...wealthProfile, labels: personalWealthProfileLabels(wealthProfile) },
       recommendation: recommendation
         ? {
             opportunity: recommendation.opportunity,
@@ -135,7 +168,14 @@ export async function POST(request: Request) {
       allocation: recommendation?.allocation ?? null,
       deterministicReasons: result.reasons,
       ruledOut: response.ruledOut,
-      aiExplanation: recommendation?.explanation ?? null,
+      aiExplanation: recommendation
+        ? {
+            source: recommendation.explanationError ? 'deterministic-fallback' : 'groq',
+            content: recommendation.explanation,
+            failureReason: recommendation.explanationError,
+            goalText: parsed.data.goalText,
+          }
+        : null,
     });
     return NextResponse.json(response);
   } catch (error) {
@@ -148,6 +188,15 @@ export async function POST(request: Request) {
 function resolveExplainer() {
   try {
     return resolveSolanaMatchExplainer();
+  } catch (error) {
+    if (error instanceof AIProviderConfigurationError) return null;
+    throw error;
+  }
+}
+
+function resolveGoalClassifier() {
+  try {
+    return resolveGoalIntentClassifier();
   } catch (error) {
     if (error instanceof AIProviderConfigurationError) return null;
     throw error;

@@ -3,6 +3,8 @@ import {
   type PlanAllocation,
   type SolanaOpportunity,
   type PlanSuitability,
+  type PersonalWealthProfile,
+  type PublicWalletSnapshotFacts,
   type RuledOutStrategy,
   type SolanaPortfolioComposition,
   type SolanaStrategyPreferences,
@@ -12,6 +14,7 @@ import type {
   SolanaMatchExplanation,
 } from './interfaces/solana-match-explainer';
 import type { SolanaOpportunityRepositoryPort } from './interfaces/solana-opportunity-repository';
+import { deterministicPlanExplanation } from './plan-explanation-fallback';
 
 export type SolanaStrategyRecommendation = Readonly<{
   opportunity: SolanaOpportunity;
@@ -42,6 +45,9 @@ export class SolanaStrategyService {
       solBalanceLamports: bigint;
       portfolioComposition?: SolanaPortfolioComposition;
       planSuitability?: PlanSuitability;
+      goalText?: string;
+      wealthProfile?: PersonalWealthProfile;
+      walletSnapshot?: PublicWalletSnapshotFacts;
     }>,
   ): Promise<SolanaStrategyResult> {
     const match = matchSolanaOpportunities({
@@ -55,10 +61,20 @@ export class SolanaStrategyService {
         reasons: match.reasons,
       };
 
-    let explanation: SolanaMatchExplanation | null = null;
+    const fallback =
+      input.planSuitability && input.wealthProfile && input.walletSnapshot && match.allocation
+        ? deterministicPlanExplanation({
+            opportunity: match.selectedOpportunity,
+            allocation: match.allocation,
+            deterministicReasons: match.reasons,
+            wealthProfile: input.wealthProfile,
+            walletSnapshot: input.walletSnapshot,
+          })
+        : null;
+    let explanation: SolanaMatchExplanation | null = fallback;
     let explanationError: string | null = null;
     if (!this.explainer) {
-      explanationError = 'The match explanation is unavailable. Try again shortly.';
+      explanationError = 'groq unavailable';
     } else {
       try {
         explanation = await this.explainer.explain({
@@ -68,11 +84,14 @@ export class SolanaStrategyService {
           deterministicReasons: match.reasons,
           allocationPercent: match.allocationPercent,
           ...(input.planSuitability ? { planSuitability: input.planSuitability } : {}),
+          ...(input.goalText ? { goalText: input.goalText } : {}),
           ...(match.allocation ? { allocation: match.allocation } : {}),
           ...(match.ruledOut ? { ruledOut: match.ruledOut } : {}),
+          ...(input.wealthProfile ? { wealthProfile: input.wealthProfile } : {}),
+          ...(input.walletSnapshot ? { walletSnapshot: input.walletSnapshot } : {}),
         });
-      } catch {
-        explanationError = 'The match explanation is unavailable. Try again shortly.';
+      } catch (error) {
+        explanationError = explanationFailureReason(error);
       }
     }
 
@@ -90,4 +109,12 @@ export class SolanaStrategyService {
       reasons: match.reasons,
     };
   }
+}
+
+function explanationFailureReason(error: unknown): string {
+  if (error instanceof SyntaxError) return 'groq malformed output';
+  if (error instanceof Error && error.message.includes('unsupported claim'))
+    return 'groq unsupported claim rejected';
+  if (error instanceof Error && error.name === 'ZodError') return 'groq validation rejected';
+  return 'groq unavailable';
 }

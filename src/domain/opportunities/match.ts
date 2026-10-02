@@ -9,6 +9,7 @@ import type {
   SolanaPortfolioComposition,
   SolanaStrategyPreferences,
 } from './index';
+import type { PersonalWealthProfile } from '../wealth-profile/index';
 
 const riskRank: Readonly<Record<SolanaOpportunityRiskLevel, number>> = {
   CONSERVATIVE: 0,
@@ -111,6 +112,7 @@ export function matchSolanaOpportunities(
     solBalanceLamports: bigint;
     portfolioComposition?: SolanaPortfolioComposition;
     planSuitability?: PlanSuitability;
+    wealthProfile?: PersonalWealthProfile;
     opportunities: readonly SolanaOpportunity[];
   }>,
 ): SolanaOpportunityMatch {
@@ -184,6 +186,7 @@ function matchPlanOpportunities(
     preferences: SolanaStrategyPreferences;
     solBalanceLamports: bigint;
     portfolioComposition?: SolanaPortfolioComposition;
+    wealthProfile?: PersonalWealthProfile;
     opportunities: readonly SolanaOpportunity[];
   }>,
   suitability: PlanSuitability,
@@ -234,7 +237,12 @@ function matchPlanOpportunities(
       ruledOut,
     };
 
-  const allocation = planAllocation(selectedOpportunity);
+  const allocation = planAllocation(
+    selectedOpportunity,
+    suitability,
+    input.wealthProfile,
+    composition,
+  );
   return {
     selectedOpportunity,
     eligibleOpportunities,
@@ -288,21 +296,93 @@ function planScore(
   return score;
 }
 
-function planAllocation(opportunity: SolanaOpportunity): readonly PlanAllocation[] {
-  if (opportunity.category === 'LENDING')
+function planAllocation(
+  opportunity: SolanaOpportunity,
+  suitability: PlanSuitability,
+  profile: PersonalWealthProfile | undefined,
+  composition: SolanaPortfolioComposition,
+): readonly PlanAllocation[] {
+  if (opportunity.category === 'LENDING') {
+    const [lending, reserve] = stablecoinAllocation(suitability, profile);
     return [
-      { label: 'Stablecoin lending', asset: 'STABLECOIN', percent: 70 },
-      { label: 'Stablecoin reserve', asset: 'STABLECOIN', percent: 30 },
+      { label: 'Stablecoin lending', asset: 'STABLECOIN', percent: lending, status: 'held' },
+      {
+        label: 'Liquid stablecoin reserve',
+        asset: 'STABLECOIN',
+        percent: reserve,
+        status: 'held',
+      },
     ];
-  if (opportunity.leverage)
+  }
+  if (opportunity.leverage) {
+    const [yieldAllocation, reserve] = leveragedAllocation(suitability, profile);
     return [
-      { label: 'Higher-risk yield', asset: 'SOL', percent: 30 },
-      { label: 'Liquid reserve', asset: 'SOL', percent: 70 },
+      { label: 'Higher-risk yield', asset: 'SOL', percent: yieldAllocation, status: 'held' },
+      { label: 'Unleveraged SOL reserve', asset: 'SOL', percent: reserve, status: 'held' },
     ];
+  }
+
+  const [staking, reserve] = stakingAllocation(suitability, profile);
+  const stablecoinsAreVisible = composition.availableAssets.includes('STABLECOIN');
   return [
-    { label: 'SOL staking', asset: 'SOL', percent: 70 },
-    { label: 'USDC reserve target', asset: 'USDC', percent: 30 },
+    { label: 'SOL staking', asset: 'SOL', percent: staking, status: 'held' },
+    {
+      label: stablecoinsAreVisible
+        ? 'Liquid stablecoin reserve'
+        : 'Liquid stablecoin reserve target',
+      asset: stablecoinsAreVisible ? 'STABLECOIN' : 'USDC',
+      percent: reserve,
+      status: stablecoinsAreVisible ? 'held' : 'target',
+    },
   ];
+}
+
+function stakingAllocation(
+  suitability: PlanSuitability,
+  profile: PersonalWealthProfile | undefined,
+): readonly [number, number] {
+  if (profile?.reservePriority === 'high' || profile?.liquidityNeed === 'high') return [40, 60];
+  if (profile?.reservePriority === 'medium' || profile?.liquidityNeed === 'medium') return [55, 45];
+  if (
+    suitability.goal === 'grow' &&
+    suitability.timeHorizon === '5-plus-years' &&
+    suitability.dropBehavior === 'hold' &&
+    profile?.reservePriority === 'low' &&
+    profile.liquidityNeed === 'low'
+  )
+    return [80, 20];
+  return [70, 30];
+}
+
+function stablecoinAllocation(
+  suitability: PlanSuitability,
+  profile: PersonalWealthProfile | undefined,
+): readonly [number, number] {
+  if (profile?.reservePriority === 'high' || profile?.liquidityNeed === 'high') return [30, 70];
+  if (profile?.reservePriority === 'medium' || profile?.liquidityNeed === 'medium') return [50, 50];
+  if (
+    suitability.goal === 'income' &&
+    (suitability.timeHorizon === '3-5-years' || suitability.timeHorizon === '5-plus-years') &&
+    profile?.reservePriority === 'low' &&
+    profile.liquidityNeed === 'low'
+  )
+    return [70, 30];
+  return [60, 40];
+}
+
+function leveragedAllocation(
+  suitability: PlanSuitability,
+  profile: PersonalWealthProfile | undefined,
+): readonly [number, number] {
+  if (
+    suitability.goal === 'grow' &&
+    suitability.timeHorizon === '5-plus-years' &&
+    suitability.dropBehavior === 'buy-more' &&
+    profile?.reservePriority === 'low' &&
+    profile.liquidityNeed === 'low'
+  )
+    return [30, 70];
+  return [20, 80];
 }
 
 function planReasons(
@@ -310,6 +390,7 @@ function planReasons(
   suitability: PlanSuitability,
   allocation: readonly PlanAllocation[],
 ): readonly string[] {
+  const reserve = allocation[allocation.length - 1]!;
   const behaviourReason =
     suitability.dropBehavior === 'hold'
       ? 'Your preference to hold through volatility supports a longer-term productive use of crypto.'
@@ -321,6 +402,8 @@ function planReasons(
   return [
     `${opportunity.name} matches the assets visible in your public wallet snapshot.`,
     behaviourReason,
-    `The suggested target keeps ${allocation[allocation.length - 1]!.percent}% in a reserve rather than allocating everything to one strategy.`,
+    reserve.status === 'target'
+      ? `The suggested target sets ${reserve.percent}% aside as a reserve target; it is not a detected holding.`
+      : `The suggested target keeps ${reserve.percent}% in a reserve rather than allocating everything to one strategy.`,
   ];
 }

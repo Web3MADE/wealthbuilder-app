@@ -10,3 +10,4 @@ export * from './opportunities/match';
 export * from './execution/index';
 export * from './audit/index';
 export * from './errors/index';
+export * from './wealth-profile/index';

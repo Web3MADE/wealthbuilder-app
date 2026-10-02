@@ -1,6 +1,8 @@
 import type {
   PlanAllocation,
   PlanSuitability,
+  PersonalWealthProfile,
+  PublicWalletSnapshotFacts,
   RuledOutStrategy,
   SolanaOpportunity,
   SolanaStrategyPreferences,
@@ -9,8 +11,12 @@ import type {
 export type SolanaMatchExplanation = Readonly<{
   headline: string;
   summary: string;
-  reasons: readonly string[];
+  whyThisFits?: readonly string[];
+  /** Kept optional while the shared Solana experience completes its V2 transition. */
+  reasons?: readonly string[];
+  walletInsight?: string;
   riskNote: string;
+  reviewWhen?: readonly string[];
 }>;
 
 export interface SolanaMatchExplainerPort {
@@ -22,8 +28,11 @@ export interface SolanaMatchExplainerPort {
       deterministicReasons: readonly string[];
       allocationPercent: number;
       planSuitability?: PlanSuitability;
+      goalText?: string;
       allocation?: readonly PlanAllocation[];
       ruledOut?: readonly RuledOutStrategy[];
+      wealthProfile?: PersonalWealthProfile;
+      walletSnapshot?: PublicWalletSnapshotFacts;
     }>,
   ): Promise<SolanaMatchExplanation>;
 }

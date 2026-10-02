@@ -31,6 +31,26 @@ type PlanResponse = Readonly<{
     timeHorizon: TimeHorizon;
     dropBehavior: DropBehavior;
   }>;
+  wealthProfile: Readonly<{
+    objective: string;
+    horizon: string;
+    drawdownPosture: string;
+    walletShape: string;
+    walletShapeBasis: string;
+    liquidityNeed: string;
+    volatilityTolerance: string;
+    reservePriority: string;
+    labels: Readonly<{
+      objective: string;
+      horizon: string;
+      drawdownPosture: string;
+      walletShape: string;
+      walletShapeBasis: string;
+      liquidityNeed: string;
+      volatilityTolerance: string;
+      reservePriority: string;
+    }>;
+  }>;
   recommendation: Readonly<{
     opportunity: Readonly<{
       name: string;
@@ -38,25 +58,27 @@ type PlanResponse = Readonly<{
       description: string;
       leverage: boolean;
     }>;
-    allocation: readonly Readonly<{ label: string; asset: string; percent: number }>[] | null;
+    allocation:
+      | readonly Readonly<{
+          label: string;
+          asset: string;
+          percent: number;
+          status: 'held' | 'target';
+        }>[]
+      | null;
     deterministicReasons: readonly string[];
     explanation: Readonly<{
       headline: string;
       summary: string;
-      reasons: readonly string[];
+      whyThisFits?: readonly string[];
+      walletInsight?: string;
       riskNote: string;
+      reviewWhen?: readonly string[];
     }> | null;
   }> | null;
   reasons: readonly string[];
   ruledOut: readonly Readonly<{ strategy: string; reason: string }>[];
 }>;
-
-const goalOptions = [
-  ['grow', 'Grow my money'],
-  ['safer', 'Keep it safer'],
-  ['income', 'Earn regular income'],
-  ['freedom', 'More freedom'],
-] as const satisfies readonly (readonly [Goal, string])[];
 
 const timeOptions = [
   ['within-1-year', 'Within 1 year'],
@@ -82,7 +104,7 @@ export function PlanScreen() {
   const [source, setSource] = useState<Source>('wallet');
   const [walletAddress, setWalletAddress] = useState('');
   const [examplePreset, setExamplePreset] = useState<ExamplePreset>('sol-heavy');
-  const [goal, setGoal] = useState<Goal>('grow');
+  const [goalText, setGoalText] = useState('');
   const [timeHorizon, setTimeHorizon] = useState<TimeHorizon>('3-5-years');
   const [dropBehavior, setDropBehavior] = useState<DropBehavior>('hold');
   const [result, setResult] = useState<PlanResponse | null>(null);
@@ -98,11 +120,10 @@ export function PlanScreen() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           source,
-          walletAddress,
-          examplePreset,
-          goal,
+          goalText,
           timeHorizon,
           dropBehavior,
+          ...(source === 'wallet' ? { walletAddress } : { examplePreset }),
         }),
       });
       const data = (await response.json()) as PlanResponse & { error?: string };
@@ -189,7 +210,16 @@ export function PlanScreen() {
             </fieldset>
           )}
           <QuestionBlock number="1" label="What do you want from crypto?">
-            <Pills options={goalOptions} value={goal} onChange={setGoal} />
+            <label className={styles.goalTextField}>
+              <span className={styles.srOnly}>Describe what you want from crypto</span>
+              <input
+                aria-label="Describe what you want from crypto"
+                onChange={(event) => setGoalText(event.target.value)}
+                placeholder="For example, grow my money over the long term"
+                type="text"
+                value={goalText}
+              />
+            </label>
           </QuestionBlock>
           <QuestionBlock number="2" label="How soon might you need this money?">
             <Pills options={timeOptions} value={timeHorizon} onChange={setTimeHorizon} />
@@ -225,7 +255,7 @@ export function PlanScreen() {
 
 function PlanPanel({ result }: { result: PlanResponse | null }) {
   const recommendation = result?.recommendation;
-  const reasons = recommendation?.explanation?.reasons ?? recommendation?.deterministicReasons;
+  const reasons = recommendation?.explanation?.whyThisFits ?? recommendation?.deterministicReasons;
   const allocation = recommendation?.allocation ?? previewAllocation;
   const ruledOut = result?.ruledOut[0];
   return (
@@ -236,11 +266,19 @@ function PlanPanel({ result }: { result: PlanResponse | null }) {
           <Coins size={30} aria-hidden="true" />
         </span>
         <div className={styles.planEyebrow}>Best fit for you</div>
-        <h3>{recommendation?.opportunity.name ?? 'Stake your SOL'}</h3>
+        <h3>
+          {recommendation?.explanation?.headline ??
+            recommendation?.opportunity.name ??
+            'Stake your SOL'}
+        </h3>
+        {recommendation?.explanation?.headline && (
+          <p className={styles.strategyName}>{recommendation.opportunity.name}</p>
+        )}
         <p className={styles.strategyCopy}>
           {recommendation?.explanation?.summary ??
             'A simple way to grow your SOL while keeping it available.'}
         </p>
+        {result?.wealthProfile && <WealthProfile profile={result.wealthProfile} />}
         <ul className={styles.reasons}>
           {(reasons ?? previewReasons).slice(0, 3).map((reason) => (
             <li key={reason}>
@@ -258,8 +296,19 @@ function PlanPanel({ result }: { result: PlanResponse | null }) {
               </span>
             ))}
           </strong>
+          {allocation.some((item) => item.status === 'target') && (
+            <small>Reserve targets are planning goals, not detected current holdings.</small>
+          )}
         </div>
-        {result?.portfolio && <PortfolioSnapshot portfolio={result.portfolio} />}
+        {result?.portfolio && (
+          <PortfolioSnapshot
+            portfolio={result.portfolio}
+            walletShapeBasis={result.wealthProfile?.walletShapeBasis}
+          />
+        )}
+        {recommendation?.explanation?.walletInsight && (
+          <PlanDetail title="Wallet insight">{recommendation.explanation.walletInsight}</PlanDetail>
+        )}
         <div className={styles.ruledOut}>
           <span>Ruled out</span>
           <p>
@@ -267,6 +316,19 @@ function PlanPanel({ result }: { result: PlanResponse | null }) {
             {ruledOut ? ` — ${ruledOut.reason}` : ' until your goals and timeline support them.'}
           </p>
         </div>
+        {recommendation?.explanation?.riskNote && (
+          <PlanDetail title="Keep in mind">{recommendation.explanation.riskNote}</PlanDetail>
+        )}
+        {recommendation?.explanation?.reviewWhen && (
+          <div className={styles.reviewWhen}>
+            <span>Review this plan when</span>
+            <ul>
+              {recommendation.explanation.reviewWhen.map((condition) => (
+                <li key={condition}>{condition}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         {recommendation && (
           <p className={styles.protocol}>
             {recommendation.opportunity.protocol} is a strategy example, not an action from this
@@ -281,7 +343,41 @@ function PlanPanel({ result }: { result: PlanResponse | null }) {
   );
 }
 
-function PortfolioSnapshot({ portfolio }: { portfolio: PlanResponse['portfolio'] }) {
+function WealthProfile({ profile }: { profile: PlanResponse['wealthProfile'] }) {
+  const facts = [
+    profile.labels.horizon,
+    profile.labels.drawdownPosture,
+    profile.labels.walletShape,
+    profile.labels.liquidityNeed,
+  ];
+  return (
+    <div className={styles.wealthProfile}>
+      <span>Your profile</span>
+      <ul>
+        {facts.map((fact) => (
+          <li key={fact}>{fact}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function PlanDetail({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className={styles.planDetail}>
+      <span>{title}</span>
+      <p>{children}</p>
+    </div>
+  );
+}
+
+function PortfolioSnapshot({
+  portfolio,
+  walletShapeBasis,
+}: {
+  portfolio: PlanResponse['portfolio'];
+  walletShapeBasis?: PlanResponse['wealthProfile']['walletShapeBasis'];
+}) {
   return (
     <div className={styles.snapshot}>
       <span>What you have</span>
@@ -294,7 +390,13 @@ function PortfolioSnapshot({ portfolio }: { portfolio: PlanResponse['portfolio']
         </p>
       )}
       {portfolio.isPartial && (
-        <small>Available public holdings only — not a complete wallet audit.</small>
+        <small>
+          {walletShapeBasis === 'partial-valuation'
+            ? 'Some visible holdings have no USD value. Shape is based on holdings with available values.'
+            : walletShapeBasis === 'asset-presence'
+              ? 'Shape is based on detected asset presence, not USD values.'
+              : 'Available public holdings only — not a complete wallet audit.'}
+        </small>
       )}
     </div>
   );
@@ -361,8 +463,8 @@ function ChoicePill({
 }
 
 const previewAllocation = [
-  { label: 'SOL staking', asset: 'SOL', percent: 70 },
-  { label: 'USDC reserve', asset: 'USDC', percent: 30 },
+  { label: 'SOL staking', asset: 'SOL', percent: 70, status: 'held' },
+  { label: 'Liquid stablecoin reserve target', asset: 'USDC', percent: 30, status: 'target' },
 ] as const;
 
 const previewReasons = ['Matches your goal', 'Fits your timeframe', 'Keeps your SOL available'];

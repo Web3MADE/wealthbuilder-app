@@ -201,6 +201,43 @@
   color: #9da9a6;
 }
 
+.goalTextField {
+  display: block;
+}
+
+.goalTextField input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid #617170;
+  border-radius: 12px;
+  outline: 0;
+  background: rgb(9 16 16 / 74%);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+}
+
+.goalTextField input::placeholder {
+  color: #9da9a6;
+}
+
+.goalTextField input:focus {
+  border-color: #b35cff;
+  box-shadow: 0 0 0 3px rgb(179 92 255 / 16%);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .examples {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -321,11 +358,53 @@
   line-height: 1;
   letter-spacing: -0.06em;
 }
+.strategyName {
+  margin: 0 0 8px;
+  color: #6bffd1;
+  font-size: 14px;
+  font-weight: 700;
+}
 .strategyCopy {
   margin: 0;
   color: #d0dad5;
   font-size: 18px;
   line-height: 1.4;
+}
+
+.wealthProfile,
+.planDetail,
+.reviewWhen {
+  border-top: 1px solid #3c514b;
+  padding-top: 18px;
+}
+.wealthProfile {
+  margin-top: 22px;
+}
+.wealthProfile > span,
+.planDetail > span,
+.reviewWhen > span {
+  display: block;
+  margin-bottom: 9px;
+  color: #cbd4d0;
+  font-size: 14px;
+  font-weight: 700;
+}
+.wealthProfile ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wealthProfile li {
+  padding: 8px 10px;
+  border: 1px solid rgb(57 106 88 / 68%);
+  border-radius: 10px;
+  background: rgb(12 36 28 / 68%);
+  color: #d8e8e1;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .reasons {
@@ -372,6 +451,13 @@
   color: #19efb0;
   font-style: normal;
 }
+.split small {
+  display: block;
+  margin-top: 8px;
+  color: #91a39c;
+  font-size: 12px;
+  line-height: 1.4;
+}
 .snapshot {
   margin-top: 22px;
 }
@@ -389,8 +475,29 @@
   font-size: 11px;
   line-height: 1.35;
 }
+.planDetail {
+  margin-top: 22px;
+}
+.planDetail p {
+  margin: 0;
+  color: #d5ddda;
+  font-size: 14px;
+  line-height: 1.45;
+}
 .ruledOut {
   margin-top: 22px;
+}
+.reviewWhen {
+  margin-top: 22px;
+}
+.reviewWhen ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 18px;
+  color: #d5ddda;
+  font-size: 14px;
+  line-height: 1.42;
 }
 .ruledOut p {
   margin: 0;
@@ -481,5 +588,8 @@
   }
   .strategyCopy {
     font-size: 16px;
+  }
+  .wealthProfile ul {
+    grid-template-columns: 1fr;
   }
 }

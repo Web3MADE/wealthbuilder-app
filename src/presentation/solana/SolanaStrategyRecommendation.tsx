@@ -79,7 +79,7 @@ export function SolanaStrategyRecommendation({
             <h3>{explanation.headline}</h3>
             <p>{explanation.summary}</p>
             <ul>
-              {explanation.reasons.map((reason) => (
+              {(explanation.whyThisFits ?? explanation.reasons ?? []).map((reason) => (
                 <li key={reason}>
                   <Check size={16} aria-hidden="true" /> {reason}
                 </li>

@@ -1,6 +1,7 @@
 import type { AIChatPort } from '@/application/interfaces/ai-chat';
 import { GroqAIPlanner, GroqConfigSchema, type GroqConfig } from './groq-ai-planner';
 import { GroqSolanaMatchExplainer } from './solana-match-explainer';
+import { GroqGoalIntentClassifier } from './groq-goal-intent-classifier';
 
 export type AIChatModel = Readonly<{
   id: string;
@@ -57,4 +58,14 @@ export function resolveSolanaMatchExplainer() {
   if (!config.success)
     throw new AIProviderConfigurationError('Groq is not configured. Set GROQ_API_KEY.');
   return new GroqSolanaMatchExplainer(config.data);
+}
+
+export function resolveGoalIntentClassifier() {
+  const config = GroqConfigSchema.safeParse({
+    apiKey: process.env.GROQ_API_KEY,
+    model: 'openai/gpt-oss-120b',
+  });
+  if (!config.success)
+    throw new AIProviderConfigurationError('Groq is not configured. Set GROQ_API_KEY.');
+  return new GroqGoalIntentClassifier(config.data);
 }

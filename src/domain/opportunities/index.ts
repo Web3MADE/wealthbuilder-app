@@ -40,6 +40,7 @@ export type PlanAllocation = Readonly<{
   label: string;
   asset: 'SOL' | 'STABLECOIN' | 'USDC';
   percent: number;
+  status: 'held' | 'target';
 }>;
 
 export type RuledOutStrategy = Readonly<{
