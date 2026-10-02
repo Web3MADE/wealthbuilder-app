@@ -3,6 +3,9 @@ import type {
   SolanaOpportunityLiquidity,
   SolanaOpportunityMatch,
   SolanaOpportunityRiskLevel,
+  PlanAllocation,
+  PlanSuitability,
+  RuledOutStrategy,
   SolanaPortfolioComposition,
   SolanaStrategyPreferences,
 } from './index';
@@ -107,9 +110,11 @@ export function matchSolanaOpportunities(
     preferences: SolanaStrategyPreferences;
     solBalanceLamports: bigint;
     portfolioComposition?: SolanaPortfolioComposition;
+    planSuitability?: PlanSuitability;
     opportunities: readonly SolanaOpportunity[];
   }>,
 ): SolanaOpportunityMatch {
+  if (input.planSuitability) return matchPlanOpportunities(input, input.planSuitability);
   const { preferences, solBalanceLamports, opportunities } = input;
   const portfolioComposition = input.portfolioComposition ?? {
     availableAssets: solBalanceLamports > 0n ? (['SOL'] as const) : [],
@@ -172,4 +177,150 @@ export function matchSolanaOpportunities(
     allocationPercent,
     reasons: matchingReasons(selectedOpportunity, preferences, allocationPercent),
   };
+}
+
+function matchPlanOpportunities(
+  input: Readonly<{
+    preferences: SolanaStrategyPreferences;
+    solBalanceLamports: bigint;
+    portfolioComposition?: SolanaPortfolioComposition;
+    opportunities: readonly SolanaOpportunity[];
+  }>,
+  suitability: PlanSuitability,
+): SolanaOpportunityMatch {
+  const composition = input.portfolioComposition ?? {
+    availableAssets: input.solBalanceLamports > 0n ? (['SOL'] as const) : [],
+    preferredAsset: 'SOL' as const,
+  };
+  if (composition.availableAssets.length === 0)
+    return {
+      selectedOpportunity: null,
+      eligibleOpportunities: [],
+      allocationPercent: null,
+      reasons: ['No supported SOL or stablecoin holding is available in this public snapshot.'],
+      ruledOut: input.opportunities.map((opportunity) => ({
+        strategy: opportunity.name,
+        reason: 'This wallet snapshot does not show the asset needed for this strategy.',
+      })),
+    };
+
+  const eligibility = input.opportunities.map((opportunity) => ({
+    opportunity,
+    reason: planExclusionReason(opportunity, suitability, composition),
+  }));
+  const eligibleOpportunities = eligibility
+    .filter(({ opportunity, reason }) => opportunity.enabled && reason === null)
+    .map(({ opportunity }) => opportunity)
+    .sort(
+      (left, right) =>
+        planScore(right, suitability, composition) - planScore(left, suitability, composition),
+    );
+  const selectedOpportunity = eligibleOpportunities[0] ?? null;
+  const ruledOut: readonly RuledOutStrategy[] = eligibility
+    .filter(({ opportunity }) => opportunity.id !== selectedOpportunity?.id)
+    .map(({ opportunity, reason }) => ({
+      strategy: opportunity.name,
+      reason:
+        reason ??
+        `${selectedOpportunity?.name ?? 'The selected strategy'} better matches your stated goal, timeline, and comfort with volatility.`,
+    }));
+
+  if (!selectedOpportunity)
+    return {
+      selectedOpportunity: null,
+      eligibleOpportunities,
+      allocationPercent: null,
+      reasons: ['No configured strategy fits this portfolio and suitability profile.'],
+      ruledOut,
+    };
+
+  const allocation = planAllocation(selectedOpportunity);
+  return {
+    selectedOpportunity,
+    eligibleOpportunities,
+    allocationPercent: allocation[0]!.percent,
+    allocation,
+    ruledOut,
+    reasons: planReasons(selectedOpportunity, suitability, allocation),
+  };
+}
+
+function planExclusionReason(
+  opportunity: SolanaOpportunity,
+  suitability: PlanSuitability,
+  composition: SolanaPortfolioComposition,
+): string | null {
+  if (!opportunity.enabled) return 'This strategy is not currently available.';
+  if (!composition.availableAssets.includes(opportunity.asset))
+    return `This public snapshot does not show ${opportunity.asset === 'SOL' ? 'SOL' : 'supported stablecoins'} for this strategy.`;
+  if (!opportunity.leverage) return null;
+  if (suitability.timeHorizon === 'within-1-year' || suitability.timeHorizon === '1-3-years')
+    return 'Your shorter timeframe makes borrowing and liquidation exposure a poor fit.';
+  if (suitability.dropBehavior === 'sell')
+    return 'Selling during large drops signals a lower tolerance for leverage and liquidation exposure.';
+  if (suitability.dropBehavior !== 'buy-more')
+    return 'This higher-risk strategy requires an explicit comfort with volatility and drawdowns.';
+  if (suitability.goal !== 'grow')
+    return 'This higher-risk strategy is reserved for a growth-oriented goal.';
+  return null;
+}
+
+function planScore(
+  opportunity: SolanaOpportunity,
+  suitability: PlanSuitability,
+  composition: SolanaPortfolioComposition,
+): number {
+  let score = opportunity.asset === composition.preferredAsset ? 100 : 0;
+  if (opportunity.category === 'LENDING') {
+    if (suitability.timeHorizon === 'within-1-year') score += 35;
+    if (suitability.dropBehavior === 'sell') score += 30;
+    if (suitability.goal === 'safer' || suitability.goal === 'freedom') score += 20;
+    if (suitability.goal === 'income') score += 15;
+  }
+  if (opportunity.category === 'STAKING') {
+    if (suitability.dropBehavior === 'hold') score += 35;
+    if (suitability.timeHorizon === '3-5-years' || suitability.timeHorizon === '5-plus-years')
+      score += 25;
+    if (suitability.goal === 'grow' || suitability.goal === 'income') score += 20;
+    if (suitability.goal === 'freedom') score += 10;
+  }
+  if (opportunity.leverage) score += 50;
+  return score;
+}
+
+function planAllocation(opportunity: SolanaOpportunity): readonly PlanAllocation[] {
+  if (opportunity.category === 'LENDING')
+    return [
+      { label: 'Stablecoin lending', asset: 'STABLECOIN', percent: 70 },
+      { label: 'Stablecoin reserve', asset: 'STABLECOIN', percent: 30 },
+    ];
+  if (opportunity.leverage)
+    return [
+      { label: 'Higher-risk yield', asset: 'SOL', percent: 30 },
+      { label: 'Liquid reserve', asset: 'SOL', percent: 70 },
+    ];
+  return [
+    { label: 'SOL staking', asset: 'SOL', percent: 70 },
+    { label: 'USDC reserve target', asset: 'USDC', percent: 30 },
+  ];
+}
+
+function planReasons(
+  opportunity: SolanaOpportunity,
+  suitability: PlanSuitability,
+  allocation: readonly PlanAllocation[],
+): readonly string[] {
+  const behaviourReason =
+    suitability.dropBehavior === 'hold'
+      ? 'Your preference to hold through volatility supports a longer-term productive use of crypto.'
+      : suitability.dropBehavior === 'sell'
+        ? 'Your preference to reduce risk during drawdowns favours a simpler, liquid option.'
+        : suitability.dropBehavior === 'buy-more'
+          ? 'Your comfort buying during drawdowns supports a higher-volatility profile when the rest of your answers agree.'
+          : 'Your answers keep the plan focused on flexibility instead of assuming aggressive risk tolerance.';
+  return [
+    `${opportunity.name} matches the assets visible in your public wallet snapshot.`,
+    behaviourReason,
+    `The suggested target keeps ${allocation[allocation.length - 1]!.percent}% in a reserve rather than allocating everything to one strategy.`,
+  ];
 }

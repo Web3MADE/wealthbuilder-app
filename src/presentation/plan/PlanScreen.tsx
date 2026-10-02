@@ -1,13 +1,13 @@
 'use client';
 
-import { ArrowRight, Check, CircleAlert, Sparkles } from 'lucide-react';
+import { ArrowRight, Check, CircleAlert, Coins, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import styles from './PlanScreen.module.css';
 
-type Goal = 'long-term-wealth' | 'preserve-crypto' | 'growth';
-type Timeline = '1-3-years' | '3-5-years' | '5-plus-years';
-type Risk = 'conservative' | 'balanced' | 'growth';
 type Source = 'wallet' | 'example';
+type Goal = 'grow' | 'safer' | 'income' | 'freedom';
+type TimeHorizon = 'within-1-year' | '1-3-years' | '3-5-years' | '5-plus-years';
+type DropBehavior = 'sell' | 'hold' | 'buy-more' | 'depends';
 type ExamplePreset = 'sol-heavy' | 'stablecoin-saver' | 'diversified-crypto';
 
 type PlanResponse = Readonly<{
@@ -18,7 +18,6 @@ type PlanResponse = Readonly<{
     solBalance: string;
     solUsdValue: number | null;
     topTokenHoldings: readonly Readonly<{
-      name: string;
       symbol: string;
       amount: string;
       usdValue: number | null;
@@ -26,18 +25,19 @@ type PlanResponse = Readonly<{
     approximateTotalUsdValue: number | null;
     isPartial: boolean;
   }>;
-  preferences: Readonly<{ goal: Goal; timeline: Timeline; risk: Risk }>;
+  suitability: Readonly<{
+    goal: Goal;
+    timeHorizon: TimeHorizon;
+    dropBehavior: DropBehavior;
+  }>;
   recommendation: Readonly<{
     opportunity: Readonly<{
-      protocol: string;
       name: string;
-      riskLevel: string;
-      liquidity: string;
+      protocol: string;
+      description: string;
       leverage: boolean;
     }>;
-    allocationPercent: number;
-    allocationAsset: 'SOL' | 'STABLECOIN';
-    approximateSolAllocationLamports: string | null;
+    allocation: readonly Readonly<{ label: string; asset: string; percent: number }>[] | null;
     deterministicReasons: readonly string[];
     explanation: Readonly<{
       headline: string;
@@ -47,69 +47,62 @@ type PlanResponse = Readonly<{
     }> | null;
   }> | null;
   reasons: readonly string[];
-  ruledOut: string;
+  ruledOut: readonly Readonly<{ strategy: string; reason: string }>[];
 }>;
 
 const goalOptions = [
-  { value: 'long-term-wealth', label: 'Build long-term wealth' },
-  { value: 'preserve-crypto', label: 'Preserve my crypto' },
-  { value: 'growth', label: 'Grow more aggressively' },
-] as const satisfies readonly Readonly<{ value: Goal; label: string }>[];
+  ['grow', 'Grow my money'],
+  ['safer', 'Keep it safer'],
+  ['income', 'Earn regular income'],
+  ['freedom', 'More freedom'],
+] as const satisfies readonly (readonly [Goal, string])[];
 
-const timelineOptions = [
-  { value: '1-3-years', label: '1–3 years' },
-  { value: '3-5-years', label: '3–5 years' },
-  { value: '5-plus-years', label: '5+ years' },
-] as const satisfies readonly Readonly<{ value: Timeline; label: string }>[];
+const timeOptions = [
+  ['within-1-year', 'Within 1 year'],
+  ['1-3-years', '1–3 years'],
+  ['3-5-years', '3–5 years'],
+  ['5-plus-years', '5+ years'],
+] as const satisfies readonly (readonly [TimeHorizon, string])[];
 
-const riskOptions = [
-  { value: 'conservative', label: 'Conservative' },
-  { value: 'balanced', label: 'Balanced' },
-  { value: 'growth', label: 'Growth' },
-] as const satisfies readonly Readonly<{ value: Risk; label: string }>[];
+const behaviorOptions = [
+  ['sell', 'Sell'],
+  ['hold', 'Hold'],
+  ['buy-more', 'Buy more'],
+  ['depends', 'It depends'],
+] as const satisfies readonly (readonly [DropBehavior, string])[];
 
 const exampleOptions = [
-  {
-    value: 'sol-heavy',
-    label: 'SOL-heavy holder',
-    detail: 'Mostly SOL, ready to put a portion to work.',
-  },
-  {
-    value: 'stablecoin-saver',
-    label: 'Stablecoin-heavy saver',
-    detail: 'A cautious mix of USDC and USDT.',
-  },
-  {
-    value: 'diversified-crypto',
-    label: 'Diversified crypto holder',
-    detail: 'SOL, stablecoins, and ecosystem tokens.',
-  },
-] as const satisfies readonly Readonly<{
-  value: ExamplePreset;
-  label: string;
-  detail: string;
-}>[];
+  ['sol-heavy', 'SOL-heavy holder'],
+  ['stablecoin-saver', 'Stablecoin-heavy saver'],
+  ['diversified-crypto', 'Diversified crypto holder'],
+] as const satisfies readonly (readonly [ExamplePreset, string])[];
 
 export function PlanScreen() {
   const [source, setSource] = useState<Source>('wallet');
   const [walletAddress, setWalletAddress] = useState('');
   const [examplePreset, setExamplePreset] = useState<ExamplePreset>('sol-heavy');
-  const [goal, setGoal] = useState<Goal>('long-term-wealth');
-  const [timeline, setTimeline] = useState<Timeline>('5-plus-years');
-  const [risk, setRisk] = useState<Risk>('balanced');
+  const [goal, setGoal] = useState<Goal>('grow');
+  const [timeHorizon, setTimeHorizon] = useState<TimeHorizon>('3-5-years');
+  const [dropBehavior, setDropBehavior] = useState<DropBehavior>('hold');
   const [result, setResult] = useState<PlanResponse | null>(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  async function buildPlan() {
+  async function getPlan() {
     setError('');
-    setResult(null);
     setIsLoading(true);
     try {
       const response = await fetch('/api/plan', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ source, walletAddress, examplePreset, goal, timeline, risk }),
+        body: JSON.stringify({
+          source,
+          walletAddress,
+          examplePreset,
+          goal,
+          timeHorizon,
+          dropBehavior,
+        }),
       });
       const data = (await response.json()) as PlanResponse & { error?: string };
       if (!response.ok) throw new Error(data.error ?? 'We could not build your plan right now.');
@@ -127,286 +120,246 @@ export function PlanScreen() {
 
   return (
     <main className={styles.page}>
-      <div className={styles.shell}>
-        <header className={styles.header}>
-          <a href="/plan" className={styles.brand} aria-label="WealthBuilder plan">
-            <span>W</span> WealthBuilder
-          </a>
-          <p>Mainnet read-only</p>
-        </header>
-
-        {!result ? (
-          <section className={styles.intro} aria-labelledby="plan-title">
-            <p className={styles.eyebrow}>Your personal wealth plan</p>
-            <h1 id="plan-title">See what your crypto could be doing for you.</h1>
-            <p className={styles.lede}>
-              Tell WealthBuilder what you own and what you&apos;re trying to achieve. Get a
-              personalized plan in seconds.
-            </p>
-            <form
-              className={styles.form}
-              onSubmit={(event) => {
-                event.preventDefault();
-                void buildPlan();
-              }}
+      <header className={styles.siteHeader}>
+        <a href="/plan" className={styles.brand} aria-label="WealthBuilder">
+          <span className={styles.brandMark}>W</span>
+          WealthBuilder
+        </a>
+      </header>
+      <div className={styles.layout}>
+        <section className={styles.formPanel} aria-labelledby="plan-title">
+          <div className={styles.progress} aria-label="Step 1 of 3">
+            <span>1 / 3</span>
+            <strong>Create your plan</strong>
+            <i />
+            <i />
+            <i />
+          </div>
+          <h1 id="plan-title">
+            Get your personalized <em>crypto plan.</em>
+          </h1>
+          <p className={styles.lede}>
+            Paste your wallet. Answer 3 quick questions. See what makes sense for you.
+          </p>
+          <div className={styles.walletMode}>
+            <button
+              type="button"
+              className={source === 'wallet' ? styles.activeMode : undefined}
+              onClick={() => setSource('wallet')}
             >
-              <div className={styles.sourceSwitch} aria-label="Portfolio source">
-                <button
-                  type="button"
-                  className={source === 'wallet' ? styles.sourceActive : undefined}
-                  onClick={() => setSource('wallet')}
-                >
-                  Use my Solana wallet
-                </button>
-                <button
-                  type="button"
-                  className={source === 'example' ? styles.sourceActive : undefined}
-                  onClick={() => setSource('example')}
-                >
-                  Try an example portfolio
-                </button>
+              Use my Solana wallet
+            </button>
+            <button
+              type="button"
+              className={source === 'example' ? styles.activeMode : undefined}
+              onClick={() => setSource('example')}
+            >
+              Try an example
+            </button>
+          </div>
+          {source === 'wallet' ? (
+            <label className={styles.walletField}>
+              <span>Your Solana wallet</span>
+              <div>
+                <Sparkles size={21} aria-hidden="true" />
+                <input
+                  value={walletAddress}
+                  onChange={(event) => setWalletAddress(event.target.value)}
+                  placeholder="Enter your wallet address…"
+                  autoComplete="off"
+                  spellCheck="false"
+                />
               </div>
-              {source === 'wallet' ? (
-                <label className={styles.addressField}>
-                  <span>Your Solana wallet</span>
-                  <input
-                    value={walletAddress}
-                    onChange={(event) => setWalletAddress(event.target.value)}
-                    placeholder="Paste your public wallet address"
-                    autoComplete="off"
-                    spellCheck="false"
-                    required
-                  />
-                </label>
-              ) : (
-                <fieldset className={styles.examples}>
-                  <legend>Choose an example</legend>
-                  {exampleOptions.map((option) => (
-                    <label key={option.value} className={styles.exampleOption}>
-                      <input
-                        type="radio"
-                        name="example-portfolio"
-                        value={option.value}
-                        checked={examplePreset === option.value}
-                        onChange={() => setExamplePreset(option.value)}
-                      />
-                      <span>
-                        <strong>{option.label}</strong>
-                        <small>{option.detail}</small>
-                      </span>
-                    </label>
-                  ))}
-                </fieldset>
-              )}
-              <PlanSelect label="Your goal" value={goal} options={goalOptions} onChange={setGoal} />
-              <PlanSelect
-                label="Your timeline"
-                value={timeline}
-                options={timelineOptions}
-                onChange={setTimeline}
-              />
-              <PlanSelect
-                label="Your risk level"
-                value={risk}
-                options={riskOptions}
-                onChange={setRisk}
-              />
-              <button type="submit" className={styles.primaryButton} disabled={isLoading}>
-                {isLoading ? 'Building your plan…' : 'Build my plan'}
-                {!isLoading && <ArrowRight size={18} aria-hidden="true" />}
-              </button>
-              {error && (
-                <p className={styles.error} role="alert">
-                  <CircleAlert size={16} aria-hidden="true" /> {error}
-                </p>
-              )}
-            </form>
-            <p className={styles.footnote}>
-              {source === 'wallet'
-                ? 'We only read your public wallet. Nothing is connected or moved.'
-                : 'Example portfolios are illustrative and are not connected to a wallet.'}
+            </label>
+          ) : (
+            <fieldset className={styles.examples}>
+              <legend>Example portfolio</legend>
+              {exampleOptions.map(([value, label]) => (
+                <ChoicePill
+                  key={value}
+                  selected={examplePreset === value}
+                  onClick={() => setExamplePreset(value)}
+                >
+                  {label}
+                </ChoicePill>
+              ))}
+            </fieldset>
+          )}
+          <QuestionBlock number="1" label="What do you want from crypto?">
+            <Pills options={goalOptions} value={goal} onChange={setGoal} />
+          </QuestionBlock>
+          <QuestionBlock number="2" label="How soon might you need this money?">
+            <Pills options={timeOptions} value={timeHorizon} onChange={setTimeHorizon} />
+          </QuestionBlock>
+          <QuestionBlock number="3" label="What do you do when your crypto drops a lot?">
+            <Pills options={behaviorOptions} value={dropBehavior} onChange={setDropBehavior} />
+          </QuestionBlock>
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={() => void getPlan()}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Building your plan…' : 'Get my plan'}
+            {!isLoading && <ArrowRight size={23} aria-hidden="true" />}
+          </button>
+          {error && (
+            <p className={styles.error} role="alert">
+              <CircleAlert size={16} aria-hidden="true" /> {error}
             </p>
-          </section>
-        ) : (
-          <PlanResult result={result} onStartOver={() => setResult(null)} />
-        )}
+          )}
+          <p className={styles.disclosure}>
+            {source === 'wallet'
+              ? 'We only read a public Mainnet wallet snapshot. Nothing is connected or moved.'
+              : 'Example portfolios are illustrative and not connected to a wallet.'}
+          </p>
+        </section>
+        <PlanPanel result={result} />
       </div>
     </main>
   );
 }
 
-function PlanSelect<T extends string>({
+function PlanPanel({ result }: { result: PlanResponse | null }) {
+  const recommendation = result?.recommendation;
+  const reasons = recommendation?.explanation?.reasons ?? recommendation?.deterministicReasons;
+  const allocation = recommendation?.allocation ?? previewAllocation;
+  const ruledOut = result?.ruledOut[0];
+  return (
+    <section className={styles.planPanel} aria-labelledby="your-plan-title">
+      <h2 id="your-plan-title">Your plan</h2>
+      <div className={styles.planCard}>
+        <span className={styles.strategyIcon}>
+          <Coins size={30} aria-hidden="true" />
+        </span>
+        <div className={styles.planEyebrow}>Best fit for you</div>
+        <h3>{recommendation?.opportunity.name ?? 'Stake your SOL'}</h3>
+        <p className={styles.strategyCopy}>
+          {recommendation?.explanation?.summary ??
+            'A simple way to grow your SOL while keeping it available.'}
+        </p>
+        <ul className={styles.reasons}>
+          {(reasons ?? previewReasons).slice(0, 3).map((reason) => (
+            <li key={reason}>
+              <Check size={19} aria-hidden="true" /> {reason}
+            </li>
+          ))}
+        </ul>
+        <div className={styles.split}>
+          <span>Suggested target split</span>
+          <strong>
+            {allocation.map((item, index) => (
+              <span key={item.label}>
+                <em>{item.percent}%</em> {item.label}
+                {index < allocation.length - 1 && ' / '}
+              </span>
+            ))}
+          </strong>
+        </div>
+        {result?.portfolio && <PortfolioSnapshot portfolio={result.portfolio} />}
+        <div className={styles.ruledOut}>
+          <span>Ruled out</span>
+          <p>
+            <strong>{ruledOut?.strategy ?? 'Higher-risk options'}</strong>
+            {ruledOut ? ` — ${ruledOut.reason}` : ' until your goals and timeline support them.'}
+          </p>
+        </div>
+        {recommendation && (
+          <p className={styles.protocol}>
+            {recommendation.opportunity.protocol} is a strategy example, not an action from this
+            page.
+          </p>
+        )}
+        <button type="button" className={styles.fullPlanButton} disabled={!result}>
+          See full plan <ArrowRight size={20} aria-hidden="true" />
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function PortfolioSnapshot({ portfolio }: { portfolio: PlanResponse['portfolio'] }) {
+  return (
+    <div className={styles.snapshot}>
+      <span>What you have</span>
+      <strong>{portfolio.solBalance} SOL</strong>
+      {portfolio.topTokenHoldings.length > 0 && (
+        <p>
+          {portfolio.topTokenHoldings
+            .map((holding) => `${holding.amount} ${holding.symbol}`)
+            .join(' · ')}
+        </p>
+      )}
+      {portfolio.isPartial && (
+        <small>Available public holdings only — not a complete wallet audit.</small>
+      )}
+    </div>
+  );
+}
+
+function QuestionBlock({
+  number,
   label,
-  value,
+  children,
+}: {
+  number: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <fieldset className={styles.question}>
+      <legend>
+        <b>{number}</b>
+        {label}
+      </legend>
+      {children}
+    </fieldset>
+  );
+}
+
+function Pills<T extends string>({
   options,
+  value,
   onChange,
 }: {
-  label: string;
+  options: readonly (readonly [T, string])[];
   value: T;
-  options: readonly Readonly<{ value: T; label: string }>[];
   onChange: (value: T) => void;
 }) {
   return (
-    <label className={styles.selectField}>
-      <span>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value as T)}>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div className={styles.pills}>
+      {options.map(([option, label]) => (
+        <ChoicePill key={option} selected={value === option} onClick={() => onChange(option)}>
+          {label}
+        </ChoicePill>
+      ))}
+    </div>
   );
 }
 
-function PlanResult({ result, onStartOver }: { result: PlanResponse; onStartOver: () => void }) {
-  const recommendation = result.recommendation;
-  if (!recommendation) {
-    return (
-      <section className={styles.result} aria-labelledby="plan-result-title">
-        <p className={styles.eyebrow}>Your WealthBuilder plan</p>
-        <h1 id="plan-result-title">No fit is available yet.</h1>
-        <p className={styles.lede}>{result.reasons[0]}</p>
-        <button type="button" className={styles.secondaryButton} onClick={onStartOver}>
-          Adjust my plan
-        </button>
-      </section>
-    );
-  }
-
-  const allocation = recommendation.approximateSolAllocationLamports
-    ? formatSol(BigInt(recommendation.approximateSolAllocationLamports))
-    : null;
-  const allocationLabel =
-    recommendation.allocationAsset === 'SOL' ? 'your SOL' : 'your stablecoins';
-  const explanationReasons =
-    recommendation.explanation?.reasons ?? recommendation.deterministicReasons;
+function ChoicePill({
+  children,
+  selected,
+  onClick,
+}: {
+  children: React.ReactNode;
+  selected: boolean;
+  onClick: () => void;
+}) {
   return (
-    <section className={styles.result} aria-labelledby="plan-result-title">
-      <div className={styles.resultHeading}>
-        <span className={styles.resultMark}>
-          <Sparkles size={20} aria-hidden="true" />
-        </span>
-        <div>
-          <p className={styles.eyebrow}>Your WealthBuilder plan</p>
-          <h1 id="plan-result-title">Put your SOL to work.</h1>
-        </div>
-      </div>
-      <PortfolioSummary portfolio={result.portfolio} />
-      <section className={styles.profile} aria-label="Your goals">
-        <span>What you&apos;re trying to achieve</span>
-        <strong>{labelFor(goalOptions, result.preferences.goal)}</strong>
-        <p>
-          {labelFor(timelineOptions, result.preferences.timeline)} ·{' '}
-          {labelFor(riskOptions, result.preferences.risk)} risk
-        </p>
-      </section>
-      <section className={styles.recommendation} aria-label="Recommended strategy">
-        <span>What fits</span>
-        <h2>
-          Put {recommendation.allocationPercent}% of {allocationLabel} to work
-        </h2>
-        {allocation && <strong>≈ {allocation} SOL</strong>}
-        <p>
-          {recommendation.opportunity.protocol} · {recommendation.opportunity.name}
-        </p>
-      </section>
-      <section className={styles.why}>
-        <h2>{recommendation.explanation?.headline ?? 'Why this fits you'}</h2>
-        {recommendation.explanation && <p>{recommendation.explanation.summary}</p>}
-        <ul>
-          {explanationReasons.slice(0, 3).map((reason) => (
-            <li key={reason}>
-              <Check size={16} aria-hidden="true" /> {reason}
-            </li>
-          ))}
-        </ul>
-      </section>
-      <dl className={styles.details}>
-        <div>
-          <dt>Risk</dt>
-          <dd>{formatLabel(recommendation.opportunity.riskLevel)}</dd>
-        </div>
-        <div>
-          <dt>Access</dt>
-          <dd>{formatLabel(recommendation.opportunity.liquidity)}</dd>
-        </div>
-        <div>
-          <dt>Borrowing</dt>
-          <dd>{recommendation.opportunity.leverage ? 'Included' : 'None'}</dd>
-        </div>
-      </dl>
-      <section className={styles.ruledOut}>
-        <h2>What we ruled out</h2>
-        <p>{result.ruledOut}</p>
-      </section>
-      <button type="button" className={styles.secondaryButton} onClick={onStartOver}>
-        Build another plan
-      </button>
-    </section>
+    <button
+      type="button"
+      className={selected ? styles.selectedPill : styles.pill}
+      onClick={onClick}
+    >
+      {children}
+    </button>
   );
 }
 
-function PortfolioSummary({ portfolio }: { portfolio: PlanResponse['portfolio'] }) {
-  return (
-    <section className={styles.holdings} aria-label="What you have">
-      <span>What you have</span>
-      {portfolio.source === 'example' && (
-        <p className={styles.exampleBadge}>Example portfolio · {portfolio.label}</p>
-      )}
-      <strong>{portfolio.solBalance} SOL</strong>
-      {portfolio.solUsdValue !== null && <p>{formatUsd(portfolio.solUsdValue)} in SOL</p>}
-      {portfolio.walletAddress && (
-        <p>{shortAddress(portfolio.walletAddress)} · Mainnet public snapshot</p>
-      )}
-      {portfolio.topTokenHoldings.length > 0 && (
-        <ul className={styles.tokens}>
-          {portfolio.topTokenHoldings.map((holding) => (
-            <li key={`${holding.symbol}-${holding.amount}`}>
-              <span>
-                <strong>{holding.symbol}</strong> {holding.amount}
-              </span>
-              {holding.usdValue !== null && <b>{formatUsd(holding.usdValue)}</b>}
-            </li>
-          ))}
-        </ul>
-      )}
-      {portfolio.approximateTotalUsdValue !== null && (
-        <p>Available snapshot: ≈ {formatUsd(portfolio.approximateTotalUsdValue)}</p>
-      )}
-      {portfolio.isPartial && (
-        <p className={styles.partial}>Available holdings only — not a complete wallet audit.</p>
-      )}
-    </section>
-  );
-}
+const previewAllocation = [
+  { label: 'SOL staking', asset: 'SOL', percent: 70 },
+  { label: 'USDC reserve', asset: 'USDC', percent: 30 },
+] as const;
 
-function formatSol(lamports: bigint) {
-  const whole = lamports / 1_000_000_000n;
-  const fraction = (lamports % 1_000_000_000n).toString().padStart(9, '0').replace(/0+$/, '');
-  return fraction ? `${whole}.${fraction}` : whole.toString();
-}
-
-function formatUsd(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatLabel(value: string) {
-  return value[0] + value.slice(1).toLowerCase();
-}
-
-function labelFor<T extends string>(
-  options: readonly Readonly<{ value: T; label: string }>[],
-  value: T,
-) {
-  return options.find((option) => option.value === value)?.label ?? value;
-}
-
-function shortAddress(value: string) {
-  return `${value.slice(0, 4)}…${value.slice(-4)}`;
-}
+const previewReasons = ['Matches your goal', 'Fits your timeframe', 'Keeps your SOL available'];

@@ -1,6 +1,9 @@
 import {
   matchSolanaOpportunities,
+  type PlanAllocation,
   type SolanaOpportunity,
+  type PlanSuitability,
+  type RuledOutStrategy,
   type SolanaPortfolioComposition,
   type SolanaStrategyPreferences,
 } from '@/domain';
@@ -13,6 +16,8 @@ import type { SolanaOpportunityRepositoryPort } from './interfaces/solana-opport
 export type SolanaStrategyRecommendation = Readonly<{
   opportunity: SolanaOpportunity;
   allocationPercent: number;
+  allocation: readonly PlanAllocation[] | null;
+  ruledOut: readonly RuledOutStrategy[];
   deterministicReasons: readonly string[];
   explanation: SolanaMatchExplanation | null;
   explanationError: string | null;
@@ -36,6 +41,7 @@ export class SolanaStrategyService {
       preferences: SolanaStrategyPreferences;
       solBalanceLamports: bigint;
       portfolioComposition?: SolanaPortfolioComposition;
+      planSuitability?: PlanSuitability;
     }>,
   ): Promise<SolanaStrategyResult> {
     const match = matchSolanaOpportunities({
@@ -61,6 +67,9 @@ export class SolanaStrategyService {
           selectedOpportunity: match.selectedOpportunity,
           deterministicReasons: match.reasons,
           allocationPercent: match.allocationPercent,
+          ...(input.planSuitability ? { planSuitability: input.planSuitability } : {}),
+          ...(match.allocation ? { allocation: match.allocation } : {}),
+          ...(match.ruledOut ? { ruledOut: match.ruledOut } : {}),
         });
       } catch {
         explanationError = 'The match explanation is unavailable. Try again shortly.';
@@ -71,6 +80,8 @@ export class SolanaStrategyService {
       recommendation: {
         opportunity: match.selectedOpportunity,
         allocationPercent: match.allocationPercent,
+        allocation: match.allocation ?? null,
+        ruledOut: match.ruledOut ?? [],
         deterministicReasons: match.reasons,
         explanation,
         explanationError,
