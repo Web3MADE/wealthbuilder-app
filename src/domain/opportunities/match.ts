@@ -103,7 +103,7 @@ function matchingReasons(
 
 /**
  * Transparent rules-based selection for the MVP. This never estimates returns,
- * allocates all assets, and only permits leverage for a Growth profile.
+ * allocates all assets, or recommends leveraged opportunities.
  */
 export function matchSolanaOpportunities(
   input: Readonly<{
@@ -143,7 +143,7 @@ export function matchSolanaOpportunities(
       (opportunity) =>
         opportunity.enabled &&
         portfolioComposition.availableAssets.includes(opportunity.asset) &&
-        (!opportunity.leverage || risk === 'growth') &&
+        !opportunity.leverage &&
         riskRank[opportunity.riskLevel] <= maximumOpportunityRisk[risk] &&
         liquidity.includes(opportunity.liquidity),
     )
