@@ -39,10 +39,22 @@
 }
 
 .brandMark {
+  position: relative;
+  display: block;
   width: 37px;
-  height: 37px;
-  clip-path: polygon(0 0, 70% 0, 100% 23%, 73% 100%, 48% 53%, 27% 100%);
-  font-size: 13px;
+  height: 34px;
+  overflow: hidden;
+  flex: none;
+  background: transparent;
+}
+
+.brandMark img {
+  position: absolute;
+  top: -8px;
+  left: -27px;
+  width: 95px;
+  height: auto;
+  max-width: none;
 }
 
 .layout {

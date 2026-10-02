@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowRight, Check, CircleAlert, Coins, Sparkles } from 'lucide-react';
+import Image from 'next/image';
 import { useState } from 'react';
 import styles from './PlanScreen.module.css';
 
@@ -122,7 +123,9 @@ export function PlanScreen() {
     <main className={styles.page}>
       <header className={styles.siteHeader}>
         <a href="/plan" className={styles.brand} aria-label="WealthBuilder">
-          <span className={styles.brandMark}>W</span>
+          <span className={styles.brandMark}>
+            <Image src="/assets/WealthBuilder_logo.png" alt="" width={1774} height={887} priority />
+          </span>
           WealthBuilder
         </a>
       </header>
