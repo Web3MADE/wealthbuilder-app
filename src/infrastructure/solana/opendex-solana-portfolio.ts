@@ -1,4 +1,5 @@
 export type PublicSolanaTokenHolding = Readonly<{
+  mint?: string;
   name: string;
   symbol: string;
   amount: string;
@@ -16,29 +17,44 @@ export type PublicSolanaPortfolio = Readonly<{
   isPartial: boolean;
 }>;
 
-type OpendexOverview = Readonly<{
-  walletBalanceNative?: number;
-  walletBalanceNativeStr?: string;
-  walletBalanceUsd?: number;
-  walletBalanceUsdStr?: string;
+type RpcResponse<T> = Readonly<{ result?: T; error?: Readonly<{ message?: string }> }>;
+type TokenAccount = Readonly<{
+  account?: Readonly<{
+    data?: Readonly<{
+      parsed?: Readonly<{
+        info?: Readonly<{
+          mint?: string;
+          tokenAmount?: Readonly<{ uiAmountString?: string }>;
+        }>;
+      }>;
+    }>;
+  }>;
 }>;
-
-type OpendexToken = Readonly<{
+type TokenSearchResult = Readonly<{
+  tokenAddress?: string;
   tokenName?: string;
   tokenSymbol?: string;
-  remainingTokens?: number;
-  remainingTokensStr?: string;
-  balanceUsd?: number;
-  balanceUsdStr?: string;
+  quote?: Readonly<{ priceUsd?: number | string | null }>;
 }>;
-
-type OpendexTokenResponse = Readonly<{ tokens?: readonly OpendexToken[] }>;
 
 export class OpendexPortfolioError extends Error {}
 
-const timeRange = 'NINETY_DAY';
+const rpcPath = '/rpc/sol';
+const tokenPrograms = [
+  'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+  'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb',
+] as const;
+const wrappedSolMint = 'So11111111111111111111111111111111111111112';
+export const knownStablecoinMints = new Set([
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+  '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo',
+  '2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH',
+]);
+const maximumEnrichedMints = 200;
+const lookupBatchSize = 50;
 
-/** Reads the bounded public trader snapshot used by the public plan experience. */
+/** Reads wallet state from OpenDEX's Solana RPC proxy; trader analytics are not required. */
 export async function fetchOpendexSolanaPortfolio(
   walletAddress: string,
 ): Promise<PublicSolanaPortfolio> {
@@ -46,38 +62,53 @@ export async function fetchOpendexSolanaPortfolio(
   if (!apiKey) throw new OpendexPortfolioError('OpenDEX portfolio access is not configured.');
 
   const apiBase = (process.env.OPENDEX_API_BASE_URL ?? 'https://api.opendex.ws').replace(/\/$/, '');
-  const headers = { 'x-api-key': apiKey };
-  const endpoint = `${apiBase}/v2/traders/SOL/${walletAddress}`;
-  const [overviewResponse, tokensResponse] = await Promise.all([
-    fetch(`${endpoint}?timeRange=${timeRange}`, { cache: 'no-store', headers }),
-    fetch(`${endpoint}/tokens?timeRange=${timeRange}&status=ACTIVE`, {
-      cache: 'no-store',
-      headers,
-    }),
+  const headers = { 'content-type': 'application/json', 'x-api-key': apiKey };
+  const [balanceResult, ...tokenResults] = await Promise.all([
+    rpc<number>(apiBase, headers, 'getBalance', [walletAddress, { commitment: 'confirmed' }]),
+    ...tokenPrograms.map((programId) =>
+      rpc<readonly TokenAccount[]>(apiBase, headers, 'getTokenAccountsByOwner', [
+        walletAddress,
+        { programId },
+        { encoding: 'jsonParsed', commitment: 'confirmed' },
+      ]).catch(() => null),
+    ),
   ]);
 
-  if (!overviewResponse.ok || !tokensResponse.ok)
-    throw new OpendexPortfolioError('OpenDEX could not retrieve this wallet right now.');
+  const amounts = new Map<string, number>();
+  for (const accounts of tokenResults) {
+    for (const item of accounts ?? []) {
+      const info = item.account?.data?.parsed?.info;
+      const amount = Number(info?.tokenAmount?.uiAmountString);
+      if (info?.mint && Number.isFinite(amount) && amount > 0)
+        amounts.set(info.mint, (amounts.get(info.mint) ?? 0) + amount);
+    }
+  }
 
-  const [overview, tokenResponse] = (await Promise.all([
-    overviewResponse.json(),
-    tokensResponse.json(),
-  ])) as [OpendexOverview, OpendexTokenResponse];
-
-  const solBalance =
-    stringValue(overview.walletBalanceNativeStr, overview.walletBalanceNative) ?? '0';
-  const solUsdValue = numberValue(overview.walletBalanceUsd, overview.walletBalanceUsdStr);
-  const topTokenHoldings = (tokenResponse.tokens ?? [])
-    .filter((token) => numberValue(token.remainingTokens, token.remainingTokensStr) !== null)
-    .map((token) => ({
-      name: token.tokenName ?? 'Unknown token',
-      symbol: token.tokenSymbol ?? 'Token',
-      amount: stringValue(token.remainingTokensStr, token.remainingTokens) ?? '0',
-      usdValue: numberValue(token.balanceUsd, token.balanceUsdStr),
-    }))
-    .sort((left, right) => (right.usdValue ?? -1) - (left.usdValue ?? -1))
-    .slice(0, 5);
-
+  const allMints = [...amounts.keys()];
+  const selectedMints = allMints
+    .sort(
+      (left, right) =>
+        Number(knownStablecoinMints.has(right)) - Number(knownStablecoinMints.has(left)),
+    )
+    .slice(0, maximumEnrichedMints);
+  const metadata = await fetchMetadata(apiBase, headers, [wrappedSolMint, ...selectedMints]);
+  const solBalance = balanceResult / 1_000_000_000;
+  const solPrice = price(metadata.get(wrappedSolMint)?.quote?.priceUsd);
+  const solUsdValue = solPrice === null ? null : solBalance * solPrice;
+  const topTokenHoldings = selectedMints
+    .map((mint): PublicSolanaTokenHolding => {
+      const token = metadata.get(mint);
+      const amount = amounts.get(mint)!;
+      const tokenPrice = price(token?.quote?.priceUsd);
+      return {
+        mint,
+        name: token?.tokenName || 'Unknown token',
+        symbol: token?.tokenSymbol || shortMint(mint),
+        amount: String(amount),
+        usdValue: tokenPrice === null ? null : amount * tokenPrice,
+      };
+    })
+    .sort((left, right) => (right.usdValue ?? -1) - (left.usdValue ?? -1));
   const knownValues = [solUsdValue, ...topTokenHoldings.map((holding) => holding.usdValue)].filter(
     (value): value is number => value !== null,
   );
@@ -85,23 +116,87 @@ export async function fetchOpendexSolanaPortfolio(
   return {
     source: 'wallet',
     walletAddress,
-    solBalance,
+    solBalance: String(solBalance),
     solUsdValue,
     topTokenHoldings,
     approximateTotalUsdValue: knownValues.length
       ? knownValues.reduce((total, value) => total + value, 0)
       : null,
-    // OpenDEX returns a trader snapshot, not an authoritative inventory of every wallet asset.
-    isPartial: true,
+    isPartial:
+      tokenResults.some((result) => result === null) ||
+      allMints.length > maximumEnrichedMints ||
+      solPrice === null ||
+      topTokenHoldings.some((holding) => holding.usdValue === null),
   };
 }
 
-function numberValue(number?: number, string?: string) {
-  const value = number ?? (string ? Number(string) : Number.NaN);
-  return Number.isFinite(value) ? value : null;
+async function rpc<T>(
+  apiBase: string,
+  headers: Record<string, string>,
+  method: string,
+  params: readonly unknown[],
+): Promise<T extends number ? number : readonly TokenAccount[]> {
+  let response: Response;
+  try {
+    response = await fetch(`${apiBase}${rpcPath}`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers,
+      body: JSON.stringify({ jsonrpc: '2.0', id: method, method, params }),
+    });
+  } catch {
+    throw new OpendexPortfolioError('OpenDEX could not retrieve this wallet right now.');
+  }
+  if (!response.ok)
+    throw new OpendexPortfolioError('OpenDEX could not retrieve this wallet right now.');
+  const body = (await response.json()) as RpcResponse<
+    T extends number ? Readonly<{ value?: number }> : Readonly<{ value?: readonly TokenAccount[] }>
+  >;
+  if (body.error || body.result?.value === undefined)
+    throw new OpendexPortfolioError('OpenDEX could not retrieve this wallet right now.');
+  return body.result.value as T extends number ? number : readonly TokenAccount[];
 }
 
-function stringValue(string?: string, number?: number) {
-  if (string !== undefined && string !== '') return string;
-  return numberValue(number) === null ? null : String(number);
+async function fetchMetadata(
+  apiBase: string,
+  headers: Record<string, string>,
+  mints: readonly string[],
+): Promise<Map<string, TokenSearchResult>> {
+  const result = new Map<string, TokenSearchResult>();
+  for (let offset = 0; offset < mints.length; offset += lookupBatchSize) {
+    const query = new URLSearchParams();
+    for (const mint of mints.slice(offset, offset + lookupBatchSize))
+      query.append('lookup', `SOL:${mint}`);
+    try {
+      const response = await fetch(`${apiBase}/v2/scanner/tokens/search?${query}`, {
+        cache: 'no-store',
+        headers,
+      });
+      if (!response.ok) continue;
+      const body = (await response.json()) as unknown;
+      const tokens = tokenArray(body);
+      for (const token of tokens) if (token.tokenAddress) result.set(token.tokenAddress, token);
+    } catch {
+      // Metadata and prices are best-effort; the on-chain balances remain useful without them.
+    }
+  }
+  return result;
+}
+
+function tokenArray(body: unknown): readonly TokenSearchResult[] {
+  if (Array.isArray(body)) return body as readonly TokenSearchResult[];
+  if (!body || typeof body !== 'object') return [];
+  const record = body as Record<string, unknown>;
+  for (const key of ['tokens', 'data', 'results'])
+    if (Array.isArray(record[key])) return record[key] as readonly TokenSearchResult[];
+  return [];
+}
+
+function price(value: number | string | null | undefined): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function shortMint(mint: string) {
+  return `${mint.slice(0, 4)}…${mint.slice(-4)}`;
 }

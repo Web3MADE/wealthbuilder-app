@@ -24,6 +24,7 @@ import { createDatabase, type Database } from '@/infrastructure/persistence/post
 import {
   OpendexPortfolioError,
   fetchOpendexSolanaPortfolio,
+  knownStablecoinMints,
   type PublicSolanaPortfolio,
 } from '@/infrastructure/solana/opendex-solana-portfolio';
 import {
@@ -209,7 +210,6 @@ async function readWalletPortfolio(walletAddress: string) {
   } catch {
     throw new Error('invalid wallet');
   }
-  // OpenDEX's SOL trader endpoints are used as the public Mainnet portfolio snapshot.
   return fetchOpendexSolanaPortfolio(walletAddress);
 }
 
@@ -219,7 +219,9 @@ function derivePortfolioComposition(
 ): SolanaPortfolioComposition {
   const stablecoinSymbols = new Set(['USDC', 'USDT', 'USDS', 'PYUSD', 'USDG']);
   const stablecoinHoldings = portfolio.topTokenHoldings.filter((holding) =>
-    stablecoinSymbols.has(holding.symbol.toUpperCase()),
+    holding.mint
+      ? knownStablecoinMints.has(holding.mint)
+      : stablecoinSymbols.has(holding.symbol.toUpperCase()),
   );
   const hasSol = solBalanceLamports > 0n;
   const hasStablecoins = stablecoinHoldings.length > 0;

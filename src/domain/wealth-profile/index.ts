@@ -19,6 +19,7 @@ export type PublicWalletSnapshotInput = Readonly<{
   solBalance: string;
   solUsdValue: number | null;
   topTokenHoldings: readonly Readonly<{
+    mint?: string;
     symbol: string;
     amount: string;
     usdValue: number | null;
@@ -33,6 +34,7 @@ export type PublicWalletSnapshotFacts = Readonly<{
   visibleStablecoinUsdValue: number | null;
   approximateKnownSnapshotUsdValue: number | null;
   topVisibleHoldings: readonly Readonly<{
+    mint?: string;
     symbol: string;
     amount: string;
     usdValue: number | null;
@@ -116,7 +118,7 @@ export function publicWalletSnapshotFacts(
   snapshot: PublicWalletSnapshotInput,
 ): PublicWalletSnapshotFacts {
   const stablecoinValues = snapshot.topTokenHoldings
-    .filter((holding) => stablecoinSymbols.has(holding.symbol.toUpperCase()))
+    .filter((holding) => isStablecoin(holding))
     .map((holding) => usableUsdValue(holding.usdValue));
   const knownStablecoinValues = stablecoinValues.filter((value): value is number => value !== null);
 
@@ -125,7 +127,8 @@ export function publicWalletSnapshotFacts(
     solUsdValue: usableUsdValue(snapshot.solUsdValue),
     visibleStablecoinUsdValue: knownStablecoinValues.length ? sum(knownStablecoinValues) : null,
     approximateKnownSnapshotUsdValue: usableUsdValue(snapshot.approximateTotalUsdValue),
-    topVisibleHoldings: snapshot.topTokenHoldings.map(({ symbol, amount, usdValue }) => ({
+    topVisibleHoldings: snapshot.topTokenHoldings.map(({ mint, symbol, amount, usdValue }) => ({
+      ...(mint ? { mint } : {}),
       symbol,
       amount,
       usdValue: usableUsdValue(usdValue),
@@ -178,25 +181,18 @@ function walletShapeDecision(snapshot: PublicWalletSnapshotInput): Readonly<{
   basis: PersonalWealthProfile['walletShapeBasis'];
 }> {
   const solUsdValue = usableUsdValue(snapshot.solUsdValue);
-  const stablecoinUsdValue = sumKnownHoldings(snapshot, (holding) =>
-    stablecoinSymbols.has(holding.symbol.toUpperCase()),
-  );
-  const otherTokenUsdValue = sumKnownHoldings(
-    snapshot,
-    (holding) => !stablecoinSymbols.has(holding.symbol.toUpperCase()),
-  );
+  const stablecoinUsdValue = sumKnownHoldings(snapshot, (holding) => isStablecoin(holding));
+  const otherTokenUsdValue = sumKnownHoldings(snapshot, (holding) => !isStablecoin(holding));
   const knownSnapshotUsdValue = [solUsdValue, stablecoinUsdValue, otherTokenUsdValue]
     .filter((value): value is number => value !== null)
     .reduce((total, value) => total + value, 0);
 
   const hasSol = positiveAmount(snapshot.solBalance);
   const hasStablecoins = snapshot.topTokenHoldings.some(
-    (holding) =>
-      stablecoinSymbols.has(holding.symbol.toUpperCase()) && positiveAmount(holding.amount),
+    (holding) => isStablecoin(holding) && positiveAmount(holding.amount),
   );
   const hasOtherTokens = snapshot.topTokenHoldings.some(
-    (holding) =>
-      !stablecoinSymbols.has(holding.symbol.toUpperCase()) && positiveAmount(holding.amount),
+    (holding) => !isStablecoin(holding) && positiveAmount(holding.amount),
   );
   const hasMissingValuation =
     (hasSol && solUsdValue === null) ||
@@ -271,4 +267,17 @@ function positiveAmount(value: string): boolean {
 
 function sum(values: readonly number[]): number {
   return values.reduce((total, value) => total + value, 0);
+}
+
+const stablecoinMints = new Set([
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+  '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo',
+  '2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH',
+]);
+
+function isStablecoin(holding: PublicWalletSnapshotInput['topTokenHoldings'][number]) {
+  return holding.mint
+    ? stablecoinMints.has(holding.mint)
+    : stablecoinSymbols.has(holding.symbol.toUpperCase());
 }

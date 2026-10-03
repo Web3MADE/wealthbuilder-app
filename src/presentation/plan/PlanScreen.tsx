@@ -1,8 +1,19 @@
 'use client';
 
-import { ArrowRight, Check, CircleAlert, Coins, Sparkles } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  CircleAlert,
+  CircleSlash,
+  Clock3,
+  Coins,
+  RefreshCw,
+  Sparkles,
+  TrendingUp,
+  X,
+} from 'lucide-react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './PlanScreen.module.css';
 
 type Source = 'wallet' | 'example';
@@ -247,100 +258,314 @@ export function PlanScreen() {
               : 'Example portfolios are illustrative and not connected to a wallet.'}
           </p>
         </section>
-        <PlanPanel result={result} />
+        <PlanPanel
+          error={error}
+          isLoading={isLoading}
+          onRetry={() => void getPlan()}
+          onUseExample={() => setSource('example')}
+          result={result}
+        />
       </div>
     </main>
   );
 }
 
-function PlanPanel({ result }: { result: PlanResponse | null }) {
+function PlanPanel({
+  error,
+  isLoading,
+  onRetry,
+  onUseExample,
+  result,
+}: {
+  error: string;
+  isLoading: boolean;
+  onRetry: () => void;
+  onUseExample: () => void;
+  result: PlanResponse | null;
+}) {
+  const [isFullPlanOpen, setIsFullPlanOpen] = useState(false);
   const recommendation = result?.recommendation;
   const reasons = recommendation?.explanation?.whyThisFits ?? recommendation?.deterministicReasons;
   const allocation = recommendation?.allocation ?? previewAllocation;
   const ruledOut = result?.ruledOut[0];
   return (
-    <section className={styles.planPanel} aria-labelledby="your-plan-title">
+    <section
+      className={`${styles.planPanel} ${isLoading ? styles.loadingPanel : ''}`}
+      aria-labelledby="your-plan-title"
+      aria-busy={isLoading}
+    >
       <h2 id="your-plan-title">Your plan</h2>
-      <div className={styles.planCard}>
+      {isLoading ? (
+        <LoadingPlan />
+      ) : error ? (
+        <FailurePlan onRetry={onRetry} onUseExample={onUseExample} />
+      ) : (
+        <div className={`${styles.planCard} ${result ? styles.successCard : styles.previewCard}`}>
+          <span className={styles.strategyIcon}>
+            <Coins size={30} aria-hidden="true" />
+          </span>
+          <div className={styles.planEyebrow}>Best fit for you</div>
+          <h3>
+            {recommendation ? strategyTitle(recommendation.opportunity.name) : 'Stake your SOL'}
+          </h3>
+          <p className={styles.strategyCopy}>
+            {recommendation?.explanation?.summary ??
+              'A simple way to grow your SOL while keeping it available.'}
+          </p>
+          <ul className={styles.reasons}>
+            {(reasons ?? previewReasons).slice(0, 3).map((reason) => (
+              <li key={reason}>
+                <Check size={19} aria-hidden="true" /> {reason}
+              </li>
+            ))}
+          </ul>
+          <div className={styles.split}>
+            <span>Suggested target split</span>
+            <strong>
+              {allocation.map((item, index) => (
+                <span key={item.label}>
+                  <em>{item.percent}%</em> {item.label}
+                  {index < allocation.length - 1 && ' / '}
+                </span>
+              ))}
+            </strong>
+            {allocation.some((item) => item.status === 'target') && (
+              <small>Reserve targets are planning goals, not detected current holdings.</small>
+            )}
+          </div>
+          <div className={styles.ruledOut}>
+            <span>Ruled out</span>
+            <p>
+              <strong>{ruledOut?.strategy ?? 'Higher-risk options'}</strong>
+              {ruledOut ? ` — ${ruledOut.reason}` : ' until your goals and timeline support them.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            className={styles.fullPlanButton}
+            disabled={!result || isLoading}
+            onClick={() => setIsFullPlanOpen(true)}
+          >
+            See full plan <ArrowRight size={20} aria-hidden="true" />
+          </button>
+        </div>
+      )}
+      {result && isFullPlanOpen && (
+        <FullPlanModal result={result} onClose={() => setIsFullPlanOpen(false)} />
+      )}
+    </section>
+  );
+}
+
+function LoadingPlan() {
+  return (
+    <div className={`${styles.planCard} ${styles.loadingCard}`}>
+      <div className={styles.loadingIntro}>
         <span className={styles.strategyIcon}>
           <Coins size={30} aria-hidden="true" />
         </span>
-        <div className={styles.planEyebrow}>Best fit for you</div>
-        <h3>
-          {recommendation?.explanation?.headline ??
-            recommendation?.opportunity.name ??
-            'Stake your SOL'}
-        </h3>
-        {recommendation?.explanation?.headline && (
-          <p className={styles.strategyName}>{recommendation.opportunity.name}</p>
-        )}
-        <p className={styles.strategyCopy}>
-          {recommendation?.explanation?.summary ??
-            'A simple way to grow your SOL while keeping it available.'}
-        </p>
-        {result?.wealthProfile && <WealthProfile profile={result.wealthProfile} />}
-        <ul className={styles.reasons}>
-          {(reasons ?? previewReasons).slice(0, 3).map((reason) => (
-            <li key={reason}>
-              <Check size={19} aria-hidden="true" /> {reason}
-            </li>
-          ))}
-        </ul>
-        <div className={styles.split}>
-          <span>Suggested target split</span>
-          <strong>
-            {allocation.map((item, index) => (
-              <span key={item.label}>
-                <em>{item.percent}%</em> {item.label}
-                {index < allocation.length - 1 && ' / '}
-              </span>
-            ))}
-          </strong>
-          {allocation.some((item) => item.status === 'target') && (
-            <small>Reserve targets are planning goals, not detected current holdings.</small>
+        <div>
+          <span>Building your personalized plan</span>
+          <p>Analyzing your portfolio, matching a strategy, and drafting your recommendation.</p>
+        </div>
+      </div>
+      <div className={styles.progressTrack} aria-label="Plan generation in progress">
+        <i />
+      </div>
+      <div className={styles.loadingDivider} />
+      <div className={styles.skeletonRows} aria-hidden="true">
+        <div>
+          <i />
+          <b />
+          <em />
+        </div>
+        <div>
+          <i />
+          <b />
+          <em />
+        </div>
+        <div>
+          <i />
+          <b />
+          <em />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FailurePlan({ onRetry, onUseExample }: { onRetry: () => void; onUseExample: () => void }) {
+  return (
+    <div className={`${styles.planCard} ${styles.failureCard}`} role="status">
+      <span className={`${styles.strategyIcon} ${styles.errorIcon}`}>
+        <CircleAlert size={32} aria-hidden="true" />
+      </span>
+      <h3>We couldn&apos;t build your plan yet</h3>
+      <p className={styles.strategyCopy}>
+        Your answers are still here — try again or switch to an example portfolio.
+      </p>
+      <button type="button" className={styles.retryButton} onClick={onRetry}>
+        <RefreshCw size={20} aria-hidden="true" /> Try again
+      </button>
+      <button type="button" className={styles.useExampleButton} onClick={onUseExample}>
+        Use an example <ArrowRight size={19} aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
+function FullPlanModal({ result, onClose }: { result: PlanResponse; onClose: () => void }) {
+  const recommendation = result.recommendation;
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', closeOnEscape);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape);
+      document.body.style.overflow = '';
+    };
+  }, [onClose]);
+
+  return (
+    <div className={styles.modalBackdrop} role="presentation" onMouseDown={onClose}>
+      <article
+        className={styles.modal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="full-plan-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className={styles.modalHeader}>
+          <div>
+            <span>Full plan</span>
+            <h2 id="full-plan-title">Your personalized crypto strategy and next steps.</h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close full plan">
+            <X aria-hidden="true" />
+          </button>
+        </header>
+        <div className={styles.modalBody}>
+          {recommendation && (
+            <>
+              <section className={styles.recommendedStrategy}>
+                <span className={styles.strategyIcon}>
+                  <Coins size={30} aria-hidden="true" />
+                </span>
+                <div>
+                  <span>Recommended strategy</span>
+                  <h3>{strategyTitle(recommendation.opportunity.name)}</h3>
+                  <p>
+                    {recommendation.explanation?.summary ?? recommendation.opportunity.description}
+                  </p>
+                </div>
+              </section>
+              <FullPlanSection title="Why this fits">
+                <ul className={styles.modalList}>
+                  {(recommendation.explanation?.whyThisFits ?? recommendation.deterministicReasons)
+                    .slice(0, 3)
+                    .map((reason) => (
+                      <li key={reason}>
+                        <Check size={18} aria-hidden="true" /> {reason}
+                      </li>
+                    ))}
+                </ul>
+              </FullPlanSection>
+              <FullPlanSection title="Suggested target split">
+                <AllocationBar allocation={recommendation.allocation ?? []} />
+                <div className={styles.fullAllocation}>
+                  {(recommendation.allocation ?? []).map((item) => (
+                    <div key={item.label}>
+                      <strong>{item.percent}%</strong>
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </FullPlanSection>
+              <FullPlanSection title="Your profile">
+                <ProfileChips profile={result.wealthProfile} />
+              </FullPlanSection>
+            </>
           )}
-        </div>
-        {result?.portfolio && (
-          <PortfolioSnapshot
-            portfolio={result.portfolio}
-            walletShapeBasis={result.wealthProfile?.walletShapeBasis}
-          />
-        )}
-        {recommendation?.explanation?.walletInsight && (
-          <PlanDetail title="Wallet insight">{recommendation.explanation.walletInsight}</PlanDetail>
-        )}
-        <div className={styles.ruledOut}>
-          <span>Ruled out</span>
-          <p>
-            <strong>{ruledOut?.strategy ?? 'Higher-risk options'}</strong>
-            {ruledOut ? ` — ${ruledOut.reason}` : ' until your goals and timeline support them.'}
-          </p>
-        </div>
-        {recommendation?.explanation?.riskNote && (
-          <PlanDetail title="Keep in mind">{recommendation.explanation.riskNote}</PlanDetail>
-        )}
-        {recommendation?.explanation?.reviewWhen && (
-          <div className={styles.reviewWhen}>
-            <span>Review this plan when</span>
-            <ul>
-              {recommendation.explanation.reviewWhen.map((condition) => (
-                <li key={condition}>{condition}</li>
+          <FullPlanSection title="Ruled out">
+            <ul className={styles.exclusionList}>
+              {result.ruledOut.map((item) => (
+                <li key={item.strategy}>
+                  <CircleSlash size={25} aria-hidden="true" />
+                  <div>
+                    <strong>{item.strategy}</strong>
+                    <span>{item.reason}</span>
+                  </div>
+                </li>
               ))}
             </ul>
-          </div>
-        )}
-        {recommendation && (
-          <p className={styles.protocol}>
-            {recommendation.opportunity.protocol} is a strategy example, not an action from this
-            page.
-          </p>
-        )}
-        <button type="button" className={styles.fullPlanButton} disabled={!result}>
-          See full plan <ArrowRight size={20} aria-hidden="true" />
-        </button>
-      </div>
+          </FullPlanSection>
+          {recommendation?.explanation?.reviewWhen && (
+            <FullPlanSection title="When to review">
+              <ul className={styles.modalList}>
+                {recommendation.explanation.reviewWhen.map((condition) => (
+                  <li key={condition}>{condition}</li>
+                ))}
+              </ul>
+            </FullPlanSection>
+          )}
+          {recommendation && (
+            <p className={styles.protocol}>{recommendation.explanation?.riskNote}</p>
+          )}
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function AllocationBar({
+  allocation,
+}: {
+  allocation: Exclude<NonNullable<PlanResponse['recommendation']>['allocation'], null>;
+}) {
+  if (!allocation.length) return null;
+  return (
+    <div className={styles.allocationBar} aria-label="Suggested allocation">
+      {allocation.map((item) => (
+        <i key={item.label} style={{ width: `${item.percent}%` }} />
+      ))}
+    </div>
+  );
+}
+
+function ProfileChips({ profile }: { profile: PlanResponse['wealthProfile'] }) {
+  const chips = [
+    [TrendingUp, profile.labels.objective],
+    [Clock3, profile.labels.horizon],
+    [Sparkles, profile.labels.drawdownPosture],
+    [Coins, profile.labels.walletShape],
+  ] as const;
+  return (
+    <div className={styles.profileChips}>
+      {chips.map(([Icon, label]) => (
+        <span key={label}>
+          <Icon size={17} aria-hidden="true" /> {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function FullPlanSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className={styles.fullPlanSection}>
+      <h3>{title}</h3>
+      {children}
     </section>
   );
+}
+
+function strategyTitle(name: string) {
+  if (name === 'SOL liquid staking') return 'Stake your SOL';
+  if (name === 'Stablecoin lending') return 'Earn on stablecoins';
+  if (name === 'Leveraged yield') return 'Higher-risk growth strategy';
+  return name;
 }
 
 function WealthProfile({ profile }: { profile: PlanResponse['wealthProfile'] }) {
@@ -358,15 +583,6 @@ function WealthProfile({ profile }: { profile: PlanResponse['wealthProfile'] }) 
           <li key={fact}>{fact}</li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-function PlanDetail({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className={styles.planDetail}>
-      <span>{title}</span>
-      <p>{children}</p>
     </div>
   );
 }

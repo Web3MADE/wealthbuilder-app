@@ -77,6 +77,8 @@
 }
 .planPanel {
   padding: clamp(24px, 3vw, 38px);
+  position: sticky;
+  top: 24px;
 }
 
 .progress {
@@ -152,10 +154,15 @@
   border: 0;
   border-radius: 10px;
   font-size: 13px;
+  transition:
+    background 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
 }
 .walletMode .activeMode {
   background: #174336;
   color: #cfffe8;
+  box-shadow: 0 5px 14px rgb(0 0 0 / 18%);
 }
 
 .walletField,
@@ -183,6 +190,14 @@
   border: 1px solid #617170;
   border-radius: 14px;
   background: rgb(9 16 16 / 74%);
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.walletField > div:focus-within {
+  border-color: #22eeb3;
+  box-shadow: 0 0 0 3px rgb(34 238 179 / 12%);
 }
 
 .walletField svg {
@@ -216,6 +231,10 @@
   color: #fff;
   font: inherit;
   font-size: 15px;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
 }
 
 .goalTextField input::placeholder {
@@ -281,6 +300,26 @@
   padding: 8px 17px;
   border-radius: 999px;
   font-size: 14px;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.pill:hover,
+.walletMode button:hover,
+.fullPlanButton:hover,
+.retryButton:hover {
+  transform: translateY(-1px);
+}
+
+.pill:active,
+.selectedPill:active,
+.primaryButton:active,
+.fullPlanButton:active,
+.retryButton:active {
+  transform: translateY(1px) scale(0.99);
 }
 
 .selectedPill {
@@ -305,6 +344,16 @@
   font-size: 21px;
   font-weight: 850;
   cursor: pointer;
+  box-shadow: 0 14px 30px rgb(0 235 171 / 14%);
+  transition:
+    transform 160ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+}
+
+.primaryButton:hover:not(:disabled) {
+  box-shadow: 0 18px 38px rgb(0 235 171 / 24%);
+  transform: translateY(-1px);
 }
 
 .primaryButton:disabled {
@@ -347,6 +396,158 @@
   border-radius: 16px;
   background: linear-gradient(145deg, #126046, #073929);
   color: #66ffd0;
+}
+.loadingCard,
+.failureCard {
+  min-height: 550px;
+}
+
+.loadingCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  animation: panelIn 260ms ease both;
+}
+
+.loadingIntro {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.loadingIntro .strategyIcon {
+  flex: none;
+  margin: 0;
+  animation: gentlePulse 1.8s ease-in-out infinite;
+}
+
+.loadingIntro span:not(.strategyIcon) {
+  color: #c9ddd5;
+  font-size: 16px;
+}
+
+.loadingIntro p {
+  max-width: 390px;
+  margin: 10px 0 0;
+  color: #eff6f2;
+  font-size: clamp(1.25rem, 2vw, 1.6rem);
+  line-height: 1.35;
+  letter-spacing: -0.035em;
+}
+
+.progressTrack {
+  height: 12px;
+  overflow: hidden;
+  margin: 34px 0 0;
+  border-radius: 99px;
+  background: #30373e;
+}
+
+.progressTrack i {
+  display: block;
+  width: 44%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #21eeb2, #48ffd0);
+  box-shadow: 0 0 17px rgb(28 240 180 / 70%);
+  animation: loadingProgress 1.8s ease-in-out infinite;
+}
+
+.loadingDivider {
+  height: 1px;
+  margin: 52px 0 26px;
+  background: #3c514b;
+}
+
+.skeletonRows {
+  display: grid;
+  gap: 22px;
+}
+
+.skeletonRows div {
+  display: grid;
+  grid-template-columns: 34px 1fr 84px;
+  align-items: center;
+  gap: 18px;
+}
+
+.skeletonRows i,
+.skeletonRows b,
+.skeletonRows em {
+  display: block;
+  height: 19px;
+  border-radius: 99px;
+  background: linear-gradient(100deg, #155745 10%, #254039 36%, #155745 65%);
+  background-size: 240% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+.skeletonRows i {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+}
+.skeletonRows em {
+  width: 84px;
+  justify-self: end;
+  background: #293037;
+}
+
+.failureCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  animation: panelIn 260ms ease both;
+}
+
+.failureCard .errorIcon {
+  margin-bottom: 30px;
+  background: radial-gradient(circle at 30% 20%, #744447, #24171a);
+  color: #ff8982;
+}
+
+.failureCard h3 {
+  max-width: 370px;
+  margin: 0 0 14px;
+  font-size: clamp(2rem, 3vw, 2.65rem);
+}
+
+.failureCard .strategyCopy {
+  max-width: 380px;
+}
+
+.retryButton,
+.useExampleButton {
+  display: flex;
+  width: min(100%, 390px);
+  min-height: 59px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 38px;
+  border: 1px solid #70817b;
+  border-radius: 15px;
+  background: #101b19;
+  color: #f1f8f5;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 750;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.useExampleButton {
+  min-height: auto;
+  margin-top: 25px;
+  padding-top: 26px;
+  border-width: 1px 0 0;
+  border-radius: 0;
+  background: transparent;
+  color: #29efb5;
 }
 .planEyebrow {
   color: #d8e1dd;
@@ -526,10 +727,363 @@
   border-radius: 15px;
   font-size: 17px;
   font-weight: 750;
+  transition:
+    transform 160ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
 }
 .fullPlanButton:disabled {
   cursor: default;
   opacity: 0.72;
+}
+
+.successCard {
+  animation: successIn 320ms ease both;
+}
+.successCard .strategyIcon {
+  animation: iconReveal 300ms 40ms ease both;
+}
+.successCard .planEyebrow,
+.successCard h3,
+.successCard .strategyCopy {
+  animation: revealUp 300ms 70ms ease both;
+}
+.successCard .reasons li {
+  animation: revealUp 280ms ease both;
+}
+.successCard .reasons li:nth-child(1) {
+  animation-delay: 120ms;
+}
+.successCard .reasons li:nth-child(2) {
+  animation-delay: 170ms;
+}
+.successCard .reasons li:nth-child(3) {
+  animation-delay: 220ms;
+}
+.successCard .split {
+  animation: revealUp 300ms 250ms ease both;
+}
+.previewCard {
+  opacity: 0.8;
+}
+
+.modalBackdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(0 6 4 / 78%);
+  backdrop-filter: blur(8px);
+  animation: backdropIn 200ms ease both;
+}
+
+.modal {
+  display: flex;
+  width: min(100%, 760px);
+  max-height: min(86svh, 820px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgb(39 231 171 / 42%);
+  border-radius: 22px;
+  background: #091410;
+  box-shadow: 0 32px 90px rgb(0 0 0 / 62%);
+  animation: modalIn 240ms ease both;
+}
+
+.modalHeader {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 26px 20px;
+  border-bottom: 1px solid #263a34;
+}
+
+.modalHeader span {
+  color: #75e7c3;
+  font-size: 13px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.modalHeader h2 {
+  margin: 5px 0 0;
+  max-width: 570px;
+  font-size: clamp(1.3rem, 2.6vw, 1.7rem);
+  line-height: 1.25;
+  letter-spacing: -0.055em;
+}
+
+.modalHeader button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  place-items: center;
+  border: 1px solid #40564f;
+  border-radius: 50%;
+  background: #101e19;
+  color: #fff;
+  cursor: pointer;
+}
+
+.modalBody {
+  overflow-y: auto;
+  padding: 4px 26px 28px;
+  overscroll-behavior: contain;
+}
+
+.fullPlanSection {
+  padding: 22px 0;
+  border-bottom: 1px solid #263a34;
+}
+
+.fullPlanSection h3 {
+  margin: 0 0 12px;
+  color: #f7faf8;
+  font-size: 16px;
+  letter-spacing: -0.015em;
+}
+
+.recommendedStrategy {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 22px;
+  padding: 26px;
+  border: 1px solid rgb(39 231 171 / 56%);
+  border-radius: 17px;
+  background: radial-gradient(circle at 90% 6%, rgb(0 235 161 / 22%), transparent 40%), #082018;
+}
+
+.recommendedStrategy .strategyIcon {
+  flex: none;
+  margin: 0;
+}
+.recommendedStrategy > div > span {
+  color: #27edb4;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.recommendedStrategy h3 {
+  margin: 6px 0 7px;
+  font-size: 28px;
+  letter-spacing: -0.045em;
+}
+.recommendedStrategy p {
+  max-width: 480px;
+}
+
+.fullPlanSection p {
+  margin: 0;
+  color: #c5d0cb;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.fullPlanSection .wealthProfile,
+.fullPlanSection .snapshot {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fullPlanSection .wealthProfile > span,
+.fullPlanSection .snapshot > span {
+  display: none;
+}
+
+.fullAllocation {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.allocationBar {
+  display: flex;
+  height: 12px;
+  overflow: hidden;
+  margin: -1px 0 15px;
+  border-radius: 99px;
+  background: #25342f;
+}
+.allocationBar i {
+  display: block;
+  background: #27edb4;
+}
+.allocationBar i + i {
+  background: #167055;
+}
+
+.fullAllocation div {
+  display: grid;
+  gap: 3px;
+  padding: 14px;
+  border: 1px solid #2f4a41;
+  border-radius: 12px;
+  background: #0c211a;
+}
+
+.fullAllocation strong {
+  color: #42f2bd;
+  font-size: 24px;
+}
+
+.fullAllocation span,
+.exclusionList span {
+  color: #b7c5bf;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.modalList,
+.exclusionList {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding-left: 20px;
+  color: #cbd7d2;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.modalList li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.modalList svg {
+  flex: none;
+  color: #21eeb2;
+}
+
+.exclusionList {
+  padding: 0;
+  list-style: none;
+}
+
+.exclusionList li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #40504b;
+  border-radius: 12px;
+  background: #111b19;
+}
+.exclusionList svg {
+  flex: none;
+  color: #b8b5ce;
+}
+.exclusionList li div {
+  display: grid;
+  gap: 3px;
+}
+
+.profileChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.profileChips span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 13px;
+  border: 1px solid #40564f;
+  border-radius: 99px;
+  color: #e7efeb;
+  font-size: 13px;
+}
+.profileChips svg {
+  color: #2cefb8;
+}
+
+.modalBody > .protocol {
+  margin-top: 20px;
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes successIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes revealUp {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes iconReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes gentlePulse {
+  50% {
+    box-shadow: 0 0 26px rgb(33 238 178 / 25%);
+  }
+}
+@keyframes loadingProgress {
+  50% {
+    transform: translateX(105%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position: -240% 0;
+  }
+}
+@keyframes backdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @media (max-width: 860px) {
@@ -542,6 +1096,9 @@
   .layout {
     grid-template-columns: 1fr;
     gap: 18px;
+  }
+  .planPanel {
+    position: static;
   }
   .formPanel,
   .planPanel {
@@ -583,6 +1140,24 @@
   .planCard {
     padding: 23px;
   }
+  .loadingCard,
+  .failureCard {
+    min-height: 430px;
+  }
+  .loadingIntro {
+    gap: 14px;
+  }
+  .loadingIntro .strategyIcon {
+    width: 62px;
+    height: 62px;
+  }
+  .skeletonRows div {
+    grid-template-columns: 30px 1fr 56px;
+    gap: 12px;
+  }
+  .skeletonRows em {
+    width: 56px;
+  }
   .planCard h3 {
     font-size: 2rem;
   }
@@ -591,5 +1166,35 @@
   }
   .wealthProfile ul {
     grid-template-columns: 1fr;
+  }
+  .modalBackdrop {
+    align-items: stretch;
+    padding: 0;
+  }
+  .modal {
+    width: 100%;
+    max-height: 100svh;
+    border-width: 0;
+    border-radius: 0;
+  }
+  .modalHeader {
+    padding: 18px 18px 16px;
+  }
+  .modalBody {
+    padding: 2px 18px 24px;
+  }
+  .fullAllocation {
+    grid-template-columns: 1fr;
+  }
+  .recommendedStrategy {
+    align-items: flex-start;
+    padding: 18px;
+  }
+  .recommendedStrategy .strategyIcon {
+    width: 58px;
+    height: 58px;
+  }
+  .recommendedStrategy h3 {
+    font-size: 24px;
   }
 }

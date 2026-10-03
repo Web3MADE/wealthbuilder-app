@@ -21,13 +21,23 @@ export class GoalIntentService {
 }
 
 function fallbackGoalIntent(goalText: string): GoalIntentClassification | null {
-  const text = goalText.toLowerCase();
-  const matches = new Set<PlanGoal>();
-  if (/\b(grow|growth|build wealth|increase value)\b/.test(text)) matches.add('grow');
-  if (/\b(safer|safe|protect|preserve|reduce risk)\b/.test(text)) matches.add('safer');
-  if (/\b(income|cash flow|regular earnings|earn regularly)\b/.test(text)) matches.add('income');
-  if (/\b(freedom|flexibility|financial independence|optionality)\b/.test(text))
-    matches.add('freedom');
-  if (matches.size !== 1) return null;
-  return { goal: [...matches][0]!, confidence: 'medium' };
+  const text = goalText.toLowerCase().replace(/[’']/g, "'");
+
+  // This is deliberately small and transparent: it makes everyday phrasing work
+  // when the optional model classifier is unavailable, without choosing a strategy.
+  if (
+    /\b(safe|safer|protect|preserve|risk|don't lose|do not lose|lose my money|less risk)\b/.test(
+      text,
+    )
+  )
+    return { goal: 'safer', confidence: 'medium' };
+  if (/\b(income|passive|yield|cash flow|earn|regular earnings)\b/.test(text))
+    return { goal: 'income', confidence: 'medium' };
+  if (
+    /\b(freedom|flexib(?:le|ility)|salary|independent|depend(?:ent|ence)|optionality)\b/.test(text)
+  )
+    return { goal: 'freedom', confidence: 'medium' };
+  if (/\b(rich|grow|growth|wealth|money|compound|bag|increase|build wealth|make more)\b/.test(text))
+    return { goal: 'grow', confidence: 'medium' };
+  return null;
 }
