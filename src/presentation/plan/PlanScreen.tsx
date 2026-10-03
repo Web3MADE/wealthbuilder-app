@@ -4,11 +4,13 @@ import {
   ArrowRight,
   Check,
   CircleAlert,
+  Instagram,
   Mail,
   Send,
   Target,
   UserRound,
   WalletCards,
+  Youtube,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, type FormEvent } from 'react';
@@ -216,7 +218,39 @@ export function PlanScreen() {
         </div>
       )}
       <footer className={styles.footer}>
-        For educational and planning purposes. Crypto involves risk and can lose value.
+        <p>For educational and planning purposes. Crypto involves risk and can lose value.</p>
+        <div className={styles.socialLinks}>
+          <span>Follow the build</span>
+          <a
+            href="https://x.com/web3made_"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.socialLink}
+            aria-label="Follow Web3MADE on X"
+          >
+            <span className={styles.xIcon} aria-hidden="true">
+              X
+            </span>
+          </a>
+          <a
+            href="https://www.youtube.com/@web3made"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.socialLink}
+            aria-label="Watch Web3MADE on YouTube"
+          >
+            <Youtube size={16} aria-hidden="true" />
+          </a>
+          <a
+            href="https://www.instagram.com/web3made/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.socialLink}
+            aria-label="Follow Web3MADE on Instagram"
+          >
+            <Instagram size={16} aria-hidden="true" />
+          </a>
+        </div>
       </footer>
     </main>
   );
@@ -280,8 +314,8 @@ function OfferPanel() {
       </h2>
       <p>Tell us what you want from life, what you own, and what matters to you.</p>
       <p className={styles.offerPromise}>
-        Within 3 days, we&apos;ll personally review your situation and send you a clear crypto plan
-        built around you.
+        We&apos;ll personally review everything and build you a clear crypto roadmap based on your
+        life, goals and portfolio.
       </p>
       <ul>
         {benefits.map(([Icon, benefit]) => (
