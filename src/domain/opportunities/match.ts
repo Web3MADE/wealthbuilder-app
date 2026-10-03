@@ -98,7 +98,7 @@ function matchingReasons(
     `${opportunity.riskLevel.toLowerCase()} risk and ${opportunity.liquidity.toLowerCase()} liquidity fit your selected profile.`,
     timelineReason,
     goalReason,
-    `The recommendation is capped at ${allocationPercent}% of your ${opportunity.asset === 'SOL' ? 'SOL' : 'stablecoin'} holdings.`,
+    `This example allocation uses up to ${allocationPercent}% of your ${opportunity.asset === 'SOL' ? 'SOL' : 'stablecoin'} holdings.`,
   ];
 }
 
@@ -233,7 +233,9 @@ function matchPlanOpportunities(
       selectedOpportunity: null,
       eligibleOpportunities,
       allocationPercent: null,
-      reasons: ['No configured strategy fits this portfolio and suitability profile.'],
+      reasons: [
+        'No configured strategy is currently aligned with these answers and visible holdings.',
+      ],
       ruledOut,
     };
 
@@ -403,7 +405,7 @@ function planReasons(
     `${opportunity.name} matches the assets visible in your public wallet snapshot.`,
     behaviourReason,
     reserve.status === 'target'
-      ? `The suggested target sets ${reserve.percent}% aside as a reserve target; it is not a detected holding.`
-      : `The suggested target keeps ${reserve.percent}% in a reserve rather than allocating everything to one strategy.`,
+      ? `This example allocation sets ${reserve.percent}% aside as a reserve target; it is not a detected holding.`
+      : `This example allocation keeps ${reserve.percent}% in a reserve rather than allocating everything to one strategy.`,
   ];
 }

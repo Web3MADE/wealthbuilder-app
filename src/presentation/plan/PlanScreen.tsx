@@ -4,150 +4,90 @@ import {
   ArrowRight,
   Check,
   CircleAlert,
-  CircleSlash,
-  Clock3,
-  Coins,
-  RefreshCw,
-  Sparkles,
-  TrendingUp,
-  X,
+  Mail,
+  Send,
+  Target,
+  UserRound,
+  WalletCards,
 } from 'lucide-react';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import styles from './PlanScreen.module.css';
 
-type Source = 'wallet' | 'example';
-type Goal = 'grow' | 'safer' | 'income' | 'freedom';
 type TimeHorizon = 'within-1-year' | '1-3-years' | '3-5-years' | '5-plus-years';
-type DropBehavior = 'sell' | 'hold' | 'buy-more' | 'depends';
-type ExamplePreset = 'sol-heavy' | 'stablecoin-saver' | 'diversified-crypto';
-
-type PlanResponse = Readonly<{
-  portfolio: Readonly<{
-    source: Source;
-    label?: string;
-    walletAddress?: string;
-    solBalance: string;
-    solUsdValue: number | null;
-    topTokenHoldings: readonly Readonly<{
-      symbol: string;
-      amount: string;
-      usdValue: number | null;
-    }>[];
-    approximateTotalUsdValue: number | null;
-    isPartial: boolean;
-  }>;
-  suitability: Readonly<{
-    goal: Goal;
-    timeHorizon: TimeHorizon;
-    dropBehavior: DropBehavior;
-  }>;
-  wealthProfile: Readonly<{
-    objective: string;
-    horizon: string;
-    drawdownPosture: string;
-    walletShape: string;
-    walletShapeBasis: string;
-    liquidityNeed: string;
-    volatilityTolerance: string;
-    reservePriority: string;
-    labels: Readonly<{
-      objective: string;
-      horizon: string;
-      drawdownPosture: string;
-      walletShape: string;
-      walletShapeBasis: string;
-      liquidityNeed: string;
-      volatilityTolerance: string;
-      reservePriority: string;
-    }>;
-  }>;
-  recommendation: Readonly<{
-    opportunity: Readonly<{
-      name: string;
-      protocol: string;
-      description: string;
-      leverage: boolean;
-    }>;
-    allocation:
-      | readonly Readonly<{
-          label: string;
-          asset: string;
-          percent: number;
-          status: 'held' | 'target';
-        }>[]
-      | null;
-    deterministicReasons: readonly string[];
-    explanation: Readonly<{
-      headline: string;
-      summary: string;
-      whyThisFits?: readonly string[];
-      walletInsight?: string;
-      riskNote: string;
-      reviewWhen?: readonly string[];
-    }> | null;
-  }> | null;
-  reasons: readonly string[];
-  ruledOut: readonly Readonly<{ strategy: string; reason: string }>[];
-}>;
+type LiquidityPreference = 'most' | 'some' | 'very-little' | 'not-sure';
+type RiskPreference = 'lower-risk' | 'balanced' | 'high-volatility';
+type CryptoExperience = 'new' | 'comfortable' | 'advanced-defi-user';
 
 const timeOptions = [
   ['within-1-year', 'Within 1 year'],
   ['1-3-years', '1–3 years'],
   ['3-5-years', '3–5 years'],
   ['5-plus-years', '5+ years'],
-] as const satisfies readonly (readonly [TimeHorizon, string])[];
-
-const behaviorOptions = [
-  ['sell', 'Sell'],
-  ['hold', 'Hold'],
-  ['buy-more', 'Buy more'],
-  ['depends', 'It depends'],
-] as const satisfies readonly (readonly [DropBehavior, string])[];
-
-const exampleOptions = [
-  ['sol-heavy', 'SOL-heavy holder'],
-  ['stablecoin-saver', 'Stablecoin-heavy saver'],
-  ['diversified-crypto', 'Diversified crypto holder'],
-] as const satisfies readonly (readonly [ExamplePreset, string])[];
+] as const;
+const liquidityOptions = [
+  ['most', 'Most'],
+  ['some', 'Some'],
+  ['very-little', 'Very little'],
+  ['not-sure', 'Not sure'],
+] as const;
+const riskOptions = [
+  ['lower-risk', 'Prefer lower risk'],
+  ['balanced', 'Balanced'],
+  ['high-volatility', 'Comfortable with high volatility'],
+] as const;
+const experienceOptions = [
+  ['new', 'New'],
+  ['comfortable', 'Comfortable'],
+  ['advanced-defi-user', 'Advanced / DeFi user'],
+] as const;
 
 export function PlanScreen() {
-  const [source, setSource] = useState<Source>('wallet');
-  const [walletAddress, setWalletAddress] = useState('');
-  const [examplePreset, setExamplePreset] = useState<ExamplePreset>('sol-heavy');
-  const [goalText, setGoalText] = useState('');
-  const [timeHorizon, setTimeHorizon] = useState<TimeHorizon>('3-5-years');
-  const [dropBehavior, setDropBehavior] = useState<DropBehavior>('hold');
-  const [result, setResult] = useState<PlanResponse | null>(null);
+  const [goal, setGoal] = useState('');
+  const [portfolio, setPortfolio] = useState('');
+  const [timeHorizon, setTimeHorizon] = useState<TimeHorizon | null>(null);
+  const [liquidityPreference, setLiquidityPreference] = useState<LiquidityPreference | null>(null);
+  const [riskPreference, setRiskPreference] = useState<RiskPreference | null>(null);
+  const [cryptoExperience, setCryptoExperience] = useState<CryptoExperience | null>(null);
+  const [additionalContext, setAdditionalContext] = useState('');
+  const [email, setEmail] = useState('');
+  const [contactHandle, setContactHandle] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
 
-  async function getPlan() {
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setError('');
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       const response = await fetch('/api/plan', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          source,
-          goalText,
+          goal,
+          portfolio,
           timeHorizon,
-          dropBehavior,
-          ...(source === 'wallet' ? { walletAddress } : { examplePreset }),
+          liquidityPreference,
+          riskPreference,
+          cryptoExperience,
+          additionalContext,
+          email,
+          contactHandle,
         }),
       });
-      const data = (await response.json()) as PlanResponse & { error?: string };
-      if (!response.ok) throw new Error(data.error ?? 'We could not build your plan right now.');
-      setResult(data);
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok)
+        throw new Error(data.error ?? "We couldn't save your details. Please try again.");
+      setSubmittedEmail(email.trim());
     } catch (requestError) {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : 'We could not build your plan right now.',
+          : "We couldn't save your details. Please try again.",
       );
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   }
 
@@ -160,527 +100,240 @@ export function PlanScreen() {
           </span>
           WealthBuilder
         </a>
+        <span className={styles.tagline}>A smarter way to grow with crypto</span>
       </header>
-      <div className={styles.layout}>
-        <section className={styles.formPanel} aria-labelledby="plan-title">
-          <div className={styles.progress} aria-label="Step 1 of 3">
-            <span>1 / 3</span>
-            <strong>Create your plan</strong>
-            <i />
-            <i />
-            <i />
-          </div>
-          <h1 id="plan-title">
-            Get your personalized <em>crypto plan.</em>
-          </h1>
-          <p className={styles.lede}>
-            Paste your wallet. Answer 3 quick questions. See what makes sense for you.
-          </p>
-          <div className={styles.walletMode}>
-            <button
-              type="button"
-              className={source === 'wallet' ? styles.activeMode : undefined}
-              onClick={() => setSource('wallet')}
-            >
-              Use my Solana wallet
-            </button>
-            <button
-              type="button"
-              className={source === 'example' ? styles.activeMode : undefined}
-              onClick={() => setSource('example')}
-            >
-              Try an example
-            </button>
-          </div>
-          {source === 'wallet' ? (
-            <label className={styles.walletField}>
-              <span>Your Solana wallet</span>
-              <div>
-                <Sparkles size={21} aria-hidden="true" />
-                <input
-                  value={walletAddress}
-                  onChange={(event) => setWalletAddress(event.target.value)}
-                  placeholder="Enter your wallet address…"
-                  autoComplete="off"
-                  spellCheck="false"
-                />
-              </div>
-            </label>
-          ) : (
-            <fieldset className={styles.examples}>
-              <legend>Example portfolio</legend>
-              {exampleOptions.map(([value, label]) => (
-                <ChoicePill
-                  key={value}
-                  selected={examplePreset === value}
-                  onClick={() => setExamplePreset(value)}
-                >
-                  {label}
-                </ChoicePill>
-              ))}
-            </fieldset>
-          )}
-          <QuestionBlock number="1" label="What do you want from crypto?">
-            <label className={styles.goalTextField}>
-              <span className={styles.srOnly}>Describe what you want from crypto</span>
-              <input
-                aria-label="Describe what you want from crypto"
-                onChange={(event) => setGoalText(event.target.value)}
-                placeholder="For example, grow my money over the long term"
-                type="text"
-                value={goalText}
-              />
-            </label>
-          </QuestionBlock>
-          <QuestionBlock number="2" label="How soon might you need this money?">
-            <Pills options={timeOptions} value={timeHorizon} onChange={setTimeHorizon} />
-          </QuestionBlock>
-          <QuestionBlock number="3" label="What do you do when your crypto drops a lot?">
-            <Pills options={behaviorOptions} value={dropBehavior} onChange={setDropBehavior} />
-          </QuestionBlock>
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={() => void getPlan()}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Building your plan…' : 'Get my plan'}
-            {!isLoading && <ArrowRight size={23} aria-hidden="true" />}
-          </button>
-          {error && (
-            <p className={styles.error} role="alert">
-              <CircleAlert size={16} aria-hidden="true" /> {error}
+      {submittedEmail ? (
+        <Confirmation email={submittedEmail} />
+      ) : (
+        <div className={styles.layout}>
+          <section className={styles.formColumn} aria-labelledby="plan-title">
+            <h1 id="plan-title">
+              Build a crypto plan around <em>your life.</em>
+            </h1>
+            <p className={styles.lede}>
+              Tell us about your goals, portfolio and preferences. We&apos;ll review it and send you
+              a personalized crypto plan.
             </p>
-          )}
-          <p className={styles.disclosure}>
-            {source === 'wallet'
-              ? 'We only read a public Mainnet wallet snapshot. Nothing is connected or moved.'
-              : 'Example portfolios are illustrative and not connected to a wallet.'}
-          </p>
-        </section>
-        <PlanPanel
-          error={error}
-          isLoading={isLoading}
-          onRetry={() => void getPlan()}
-          onUseExample={() => setSource('example')}
-          result={result}
-        />
-      </div>
+            <form onSubmit={(event) => void submit(event)} noValidate>
+              <Question number="1" title="What are you trying to achieve with your money/crypto?">
+                <textarea
+                  value={goal}
+                  onChange={(event) => setGoal(event.target.value)}
+                  placeholder="I want to grow enough to buy a house in 5 years and still keep some money accessible."
+                  rows={3}
+                />
+              </Question>
+              <Question number="2" title="What does your portfolio roughly look like today?">
+                <textarea
+                  value={portfolio}
+                  onChange={(event) => setPortfolio(event.target.value)}
+                  placeholder="For example: SOL 40%, BTC 20%, ETH 15%, USDC 25%"
+                  rows={2}
+                />
+                <div className={styles.questionDivider} />
+                <h3>How soon might you need some of this money?</h3>
+                <Choices options={timeOptions} value={timeHorizon} onChange={setTimeHorizon} />
+              </Question>
+              <Question number="3" title="Preferences and situation">
+                <div className={styles.preferenceGrid}>
+                  <div>
+                    <h3>How much do you need to keep easily accessible?</h3>
+                    <Choices
+                      options={liquidityOptions}
+                      value={liquidityPreference}
+                      onChange={setLiquidityPreference}
+                    />
+                  </div>
+                  <div className={styles.riskChoice}>
+                    <h3>How comfortable are you with crypto risk?</h3>
+                    <Choices
+                      options={riskOptions}
+                      value={riskPreference}
+                      onChange={setRiskPreference}
+                    />
+                  </div>
+                </div>
+                <div className={styles.experienceChoice}>
+                  <h3>What&apos;s your crypto experience?</h3>
+                  <Choices
+                    options={experienceOptions}
+                    value={cryptoExperience}
+                    onChange={setCryptoExperience}
+                  />
+                </div>
+                <label className={styles.optionalField}>
+                  <span>
+                    Anything else we should know about your situation? <small>(optional)</small>
+                  </span>
+                  <textarea
+                    value={additionalContext}
+                    onChange={(event) => setAdditionalContext(event.target.value)}
+                    placeholder="No leverage, upcoming expenses, income needs, never sell BTC, etc."
+                    rows={2}
+                  />
+                </label>
+              </Question>
+              <Question number="4" title="Where should we send your plan?">
+                <div className={styles.contactFields}>
+                  <label className={styles.contactField}>
+                    <Mail size={22} aria-hidden="true" />
+                    <span>Email address</span>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                    />
+                  </label>
+                  <label className={styles.contactField}>
+                    <Send size={22} aria-hidden="true" />
+                    <span>
+                      Telegram or WhatsApp <small>(optional)</small>
+                    </span>
+                    <input
+                      type="text"
+                      value={contactHandle}
+                      onChange={(event) => setContactHandle(event.target.value)}
+                      placeholder="@username or +1 234 567 890"
+                      autoComplete="off"
+                    />
+                  </label>
+                </div>
+                <button type="submit" className={styles.primaryButton} disabled={isSubmitting}>
+                  {isSubmitting ? 'Sending…' : 'Send me my plan'}{' '}
+                  <ArrowRight size={23} aria-hidden="true" />
+                </button>
+                {error && (
+                  <p className={styles.error} role="alert">
+                    <CircleAlert size={17} /> {error}
+                  </p>
+                )}
+              </Question>
+            </form>
+          </section>
+          <OfferPanel />
+        </div>
+      )}
+      <footer className={styles.footer}>
+        For educational and planning purposes. Crypto involves risk and can lose value.
+      </footer>
     </main>
   );
 }
 
-function PlanPanel({
-  error,
-  isLoading,
-  onRetry,
-  onUseExample,
-  result,
-}: {
-  error: string;
-  isLoading: boolean;
-  onRetry: () => void;
-  onUseExample: () => void;
-  result: PlanResponse | null;
-}) {
-  const [isFullPlanOpen, setIsFullPlanOpen] = useState(false);
-  const recommendation = result?.recommendation;
-  const reasons = recommendation?.explanation?.whyThisFits ?? recommendation?.deterministicReasons;
-  const allocation = recommendation?.allocation ?? previewAllocation;
-  const ruledOut = result?.ruledOut[0];
-  return (
-    <section
-      className={`${styles.planPanel} ${isLoading ? styles.loadingPanel : ''}`}
-      aria-labelledby="your-plan-title"
-      aria-busy={isLoading}
-    >
-      <h2 id="your-plan-title">Your plan</h2>
-      {isLoading ? (
-        <LoadingPlan />
-      ) : error ? (
-        <FailurePlan onRetry={onRetry} onUseExample={onUseExample} />
-      ) : (
-        <div className={`${styles.planCard} ${result ? styles.successCard : styles.previewCard}`}>
-          <span className={styles.strategyIcon}>
-            <Coins size={30} aria-hidden="true" />
-          </span>
-          <div className={styles.planEyebrow}>Best fit for you</div>
-          <h3>
-            {recommendation ? strategyTitle(recommendation.opportunity.name) : 'Stake your SOL'}
-          </h3>
-          <p className={styles.strategyCopy}>
-            {recommendation?.explanation?.summary ??
-              'A simple way to grow your SOL while keeping it available.'}
-          </p>
-          <ul className={styles.reasons}>
-            {(reasons ?? previewReasons).slice(0, 3).map((reason) => (
-              <li key={reason}>
-                <Check size={19} aria-hidden="true" /> {reason}
-              </li>
-            ))}
-          </ul>
-          <div className={styles.split}>
-            <span>Suggested target split</span>
-            <strong>
-              {allocation.map((item, index) => (
-                <span key={item.label}>
-                  <em>{item.percent}%</em> {item.label}
-                  {index < allocation.length - 1 && ' / '}
-                </span>
-              ))}
-            </strong>
-            {allocation.some((item) => item.status === 'target') && (
-              <small>Reserve targets are planning goals, not detected current holdings.</small>
-            )}
-          </div>
-          <div className={styles.ruledOut}>
-            <span>Ruled out</span>
-            <p>
-              <strong>{ruledOut?.strategy ?? 'Higher-risk options'}</strong>
-              {ruledOut ? ` — ${ruledOut.reason}` : ' until your goals and timeline support them.'}
-            </p>
-          </div>
-          <button
-            type="button"
-            className={styles.fullPlanButton}
-            disabled={!result || isLoading}
-            onClick={() => setIsFullPlanOpen(true)}
-          >
-            See full plan <ArrowRight size={20} aria-hidden="true" />
-          </button>
-        </div>
-      )}
-      {result && isFullPlanOpen && (
-        <FullPlanModal result={result} onClose={() => setIsFullPlanOpen(false)} />
-      )}
-    </section>
-  );
-}
-
-function LoadingPlan() {
-  return (
-    <div className={`${styles.planCard} ${styles.loadingCard}`}>
-      <div className={styles.loadingIntro}>
-        <span className={styles.strategyIcon}>
-          <Coins size={30} aria-hidden="true" />
-        </span>
-        <div>
-          <span>Building your personalized plan</span>
-          <p>Analyzing your portfolio, matching a strategy, and drafting your recommendation.</p>
-        </div>
-      </div>
-      <div className={styles.progressTrack} aria-label="Plan generation in progress">
-        <i />
-      </div>
-      <div className={styles.loadingDivider} />
-      <div className={styles.skeletonRows} aria-hidden="true">
-        <div>
-          <i />
-          <b />
-          <em />
-        </div>
-        <div>
-          <i />
-          <b />
-          <em />
-        </div>
-        <div>
-          <i />
-          <b />
-          <em />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FailurePlan({ onRetry, onUseExample }: { onRetry: () => void; onUseExample: () => void }) {
-  return (
-    <div className={`${styles.planCard} ${styles.failureCard}`} role="status">
-      <span className={`${styles.strategyIcon} ${styles.errorIcon}`}>
-        <CircleAlert size={32} aria-hidden="true" />
-      </span>
-      <h3>We couldn&apos;t build your plan yet</h3>
-      <p className={styles.strategyCopy}>
-        Your answers are still here — try again or switch to an example portfolio.
-      </p>
-      <button type="button" className={styles.retryButton} onClick={onRetry}>
-        <RefreshCw size={20} aria-hidden="true" /> Try again
-      </button>
-      <button type="button" className={styles.useExampleButton} onClick={onUseExample}>
-        Use an example <ArrowRight size={19} aria-hidden="true" />
-      </button>
-    </div>
-  );
-}
-
-function FullPlanModal({ result, onClose }: { result: PlanResponse; onClose: () => void }) {
-  const recommendation = result.recommendation;
-  useEffect(() => {
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', closeOnEscape);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', closeOnEscape);
-      document.body.style.overflow = '';
-    };
-  }, [onClose]);
-
-  return (
-    <div className={styles.modalBackdrop} role="presentation" onMouseDown={onClose}>
-      <article
-        className={styles.modal}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="full-plan-title"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header className={styles.modalHeader}>
-          <div>
-            <span>Full plan</span>
-            <h2 id="full-plan-title">Your personalized crypto strategy and next steps.</h2>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close full plan">
-            <X aria-hidden="true" />
-          </button>
-        </header>
-        <div className={styles.modalBody}>
-          {recommendation && (
-            <>
-              <section className={styles.recommendedStrategy}>
-                <span className={styles.strategyIcon}>
-                  <Coins size={30} aria-hidden="true" />
-                </span>
-                <div>
-                  <span>Recommended strategy</span>
-                  <h3>{strategyTitle(recommendation.opportunity.name)}</h3>
-                  <p>
-                    {recommendation.explanation?.summary ?? recommendation.opportunity.description}
-                  </p>
-                </div>
-              </section>
-              <FullPlanSection title="Why this fits">
-                <ul className={styles.modalList}>
-                  {(recommendation.explanation?.whyThisFits ?? recommendation.deterministicReasons)
-                    .slice(0, 3)
-                    .map((reason) => (
-                      <li key={reason}>
-                        <Check size={18} aria-hidden="true" /> {reason}
-                      </li>
-                    ))}
-                </ul>
-              </FullPlanSection>
-              <FullPlanSection title="Suggested target split">
-                <AllocationBar allocation={recommendation.allocation ?? []} />
-                <div className={styles.fullAllocation}>
-                  {(recommendation.allocation ?? []).map((item) => (
-                    <div key={item.label}>
-                      <strong>{item.percent}%</strong>
-                      <span>{item.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </FullPlanSection>
-              <FullPlanSection title="Your profile">
-                <ProfileChips profile={result.wealthProfile} />
-              </FullPlanSection>
-            </>
-          )}
-          <FullPlanSection title="Ruled out">
-            <ul className={styles.exclusionList}>
-              {result.ruledOut.map((item) => (
-                <li key={item.strategy}>
-                  <CircleSlash size={25} aria-hidden="true" />
-                  <div>
-                    <strong>{item.strategy}</strong>
-                    <span>{item.reason}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </FullPlanSection>
-          {recommendation?.explanation?.reviewWhen && (
-            <FullPlanSection title="When to review">
-              <ul className={styles.modalList}>
-                {recommendation.explanation.reviewWhen.map((condition) => (
-                  <li key={condition}>{condition}</li>
-                ))}
-              </ul>
-            </FullPlanSection>
-          )}
-          {recommendation && (
-            <p className={styles.protocol}>{recommendation.explanation?.riskNote}</p>
-          )}
-        </div>
-      </article>
-    </div>
-  );
-}
-
-function AllocationBar({
-  allocation,
-}: {
-  allocation: Exclude<NonNullable<PlanResponse['recommendation']>['allocation'], null>;
-}) {
-  if (!allocation.length) return null;
-  return (
-    <div className={styles.allocationBar} aria-label="Suggested allocation">
-      {allocation.map((item) => (
-        <i key={item.label} style={{ width: `${item.percent}%` }} />
-      ))}
-    </div>
-  );
-}
-
-function ProfileChips({ profile }: { profile: PlanResponse['wealthProfile'] }) {
-  const chips = [
-    [TrendingUp, profile.labels.objective],
-    [Clock3, profile.labels.horizon],
-    [Sparkles, profile.labels.drawdownPosture],
-    [Coins, profile.labels.walletShape],
-  ] as const;
-  return (
-    <div className={styles.profileChips}>
-      {chips.map(([Icon, label]) => (
-        <span key={label}>
-          <Icon size={17} aria-hidden="true" /> {label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function FullPlanSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className={styles.fullPlanSection}>
-      <h3>{title}</h3>
-      {children}
-    </section>
-  );
-}
-
-function strategyTitle(name: string) {
-  if (name === 'SOL liquid staking') return 'Stake your SOL';
-  if (name === 'Stablecoin lending') return 'Earn on stablecoins';
-  if (name === 'Leveraged yield') return 'Higher-risk growth strategy';
-  return name;
-}
-
-function WealthProfile({ profile }: { profile: PlanResponse['wealthProfile'] }) {
-  const facts = [
-    profile.labels.horizon,
-    profile.labels.drawdownPosture,
-    profile.labels.walletShape,
-    profile.labels.liquidityNeed,
-  ];
-  return (
-    <div className={styles.wealthProfile}>
-      <span>Your profile</span>
-      <ul>
-        {facts.map((fact) => (
-          <li key={fact}>{fact}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function PortfolioSnapshot({
-  portfolio,
-  walletShapeBasis,
-}: {
-  portfolio: PlanResponse['portfolio'];
-  walletShapeBasis?: PlanResponse['wealthProfile']['walletShapeBasis'];
-}) {
-  return (
-    <div className={styles.snapshot}>
-      <span>What you have</span>
-      <strong>{portfolio.solBalance} SOL</strong>
-      {portfolio.topTokenHoldings.length > 0 && (
-        <p>
-          {portfolio.topTokenHoldings
-            .map((holding) => `${holding.amount} ${holding.symbol}`)
-            .join(' · ')}
-        </p>
-      )}
-      {portfolio.isPartial && (
-        <small>
-          {walletShapeBasis === 'partial-valuation'
-            ? 'Some visible holdings have no USD value. Shape is based on holdings with available values.'
-            : walletShapeBasis === 'asset-presence'
-              ? 'Shape is based on detected asset presence, not USD values.'
-              : 'Available public holdings only — not a complete wallet audit.'}
-        </small>
-      )}
-    </div>
-  );
-}
-
-function QuestionBlock({
+function Question({
   number,
-  label,
+  title,
   children,
 }: {
   number: string;
-  label: string;
+  title: string;
   children: React.ReactNode;
 }) {
   return (
     <fieldset className={styles.question}>
       <legend>
         <b>{number}</b>
-        {label}
+        <span>{title}</span>
       </legend>
       {children}
     </fieldset>
   );
 }
-
-function Pills<T extends string>({
+function Choices<T extends string>({
   options,
   value,
   onChange,
 }: {
   options: readonly (readonly [T, string])[];
-  value: T;
+  value: T | null;
   onChange: (value: T) => void;
 }) {
   return (
-    <div className={styles.pills}>
+    <div className={styles.choices}>
       {options.map(([option, label]) => (
-        <ChoicePill key={option} selected={value === option} onClick={() => onChange(option)}>
+        <button
+          type="button"
+          key={option}
+          className={value === option ? styles.choiceActive : styles.choice}
+          onClick={() => onChange(option)}
+        >
           {label}
-        </ChoicePill>
+        </button>
       ))}
     </div>
   );
 }
-
-function ChoicePill({
-  children,
-  selected,
-  onClick,
-}: {
-  children: React.ReactNode;
-  selected: boolean;
-  onClick: () => void;
-}) {
+function OfferPanel() {
+  const benefits = [
+    [UserRound, 'Build a crypto plan around your life'],
+    [WalletCards, 'Know what to keep liquid and what to put to work'],
+    [Target, 'Get the 3–5 opportunities most worth exploring'],
+    [Check, 'Stop researching endlessly and get a clear roadmap'],
+  ] as const;
   return (
-    <button
-      type="button"
-      className={selected ? styles.selectedPill : styles.pill}
-      onClick={onClick}
-    >
-      {children}
-    </button>
+    <aside className={styles.offerPanel}>
+      <span className={styles.earlyAccess}>Free early access</span>
+      <h2>
+        Stop guessing <em>with your crypto.</em>
+      </h2>
+      <p>Tell us what you want from life, what you own, and what matters to you.</p>
+      <p className={styles.offerPromise}>
+        Within 3 days, we&apos;ll personally review your situation and send you a clear crypto plan
+        built around you.
+      </p>
+      <ul>
+        {benefits.map(([Icon, benefit]) => (
+          <li key={benefit}>
+            <i>
+              <Icon size={24} />
+            </i>
+            <span>{benefit}</span>
+          </li>
+        ))}
+      </ul>
+      <a href="#plan-title" className={styles.offerButton}>
+        Get my free plan <ArrowRight size={23} />
+      </a>
+      <p className={styles.earlyUsers}>
+        <UserRound size={20} /> Free for the first 100 early users.
+      </p>
+      <div className={styles.offerArtwork}>
+        <Image
+          src="/assets/WB_backgroundImage.png"
+          alt=""
+          fill
+          sizes="(max-width: 760px) 100vw, 420px"
+        />
+      </div>
+    </aside>
   );
 }
-
-const previewAllocation = [
-  { label: 'SOL staking', asset: 'SOL', percent: 70, status: 'held' },
-  { label: 'Liquid stablecoin reserve target', asset: 'USDC', percent: 30, status: 'target' },
-] as const;
-
-const previewReasons = ['Matches your goal', 'Fits your timeframe', 'Keeps your SOL available'];
+function Confirmation({ email }: { email: string }) {
+  return (
+    <section className={styles.confirmation} aria-live="polite">
+      <span className={styles.confirmationIcon}>
+        <Check size={36} />
+      </span>
+      <p className={styles.confirmationEyebrow}>Your request is in</p>
+      <h1>We&apos;ve got it.</h1>
+      <p>
+        We&apos;ll review your goals, portfolio and preferences and send your personalized crypto
+        plan within 3 days.
+      </p>
+      <strong>{email}</strong>
+      <ul>
+        <li>
+          <Check size={18} /> Personally reviewed
+        </li>
+        <li>
+          <Check size={18} /> Built around your situation
+        </li>
+        <li>
+          <Check size={18} /> Delivered by email
+        </li>
+      </ul>
+    </section>
+  );
+}

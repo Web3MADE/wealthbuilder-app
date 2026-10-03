@@ -34,12 +34,12 @@ type TokenSearchResult = Readonly<{
   tokenAddress?: string;
   tokenName?: string;
   tokenSymbol?: string;
+  tokenDecimals?: number;
   quote?: Readonly<{ priceUsd?: number | string | null }>;
 }>;
 
-export class OpendexPortfolioError extends Error {}
+export class SolanaPortfolioError extends Error {}
 
-const rpcPath = '/rpc/sol';
 const tokenPrograms = [
   'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
   'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb',
@@ -54,19 +54,16 @@ export const knownStablecoinMints = new Set([
 const maximumEnrichedMints = 200;
 const lookupBatchSize = 50;
 
-/** Reads wallet state from OpenDEX's Solana RPC proxy; trader analytics are not required. */
-export async function fetchOpendexSolanaPortfolio(
-  walletAddress: string,
-): Promise<PublicSolanaPortfolio> {
+/** Reads authoritative wallet inventory from Solana RPC and enriches known mints with OpenDEX. */
+export async function fetchSolanaPortfolio(walletAddress: string): Promise<PublicSolanaPortfolio> {
   const apiKey = process.env.OPENDEX_API_KEY;
-  if (!apiKey) throw new OpendexPortfolioError('OpenDEX portfolio access is not configured.');
-
+  const solanaRpcUrl = process.env.SOLANA_MAINNET_RPC_URL || 'https://api.mainnet.solana.com';
   const apiBase = (process.env.OPENDEX_API_BASE_URL ?? 'https://api.opendex.ws').replace(/\/$/, '');
-  const headers = { 'content-type': 'application/json', 'x-api-key': apiKey };
+  const enrichmentHeaders = apiKey ? { 'x-api-key': apiKey } : undefined;
   const [balanceResult, ...tokenResults] = await Promise.all([
-    rpc<number>(apiBase, headers, 'getBalance', [walletAddress, { commitment: 'confirmed' }]),
+    solanaRpc<number>(solanaRpcUrl, 'getBalance', [walletAddress, { commitment: 'confirmed' }]),
     ...tokenPrograms.map((programId) =>
-      rpc<readonly TokenAccount[]>(apiBase, headers, 'getTokenAccountsByOwner', [
+      solanaRpc<readonly TokenAccount[]>(solanaRpcUrl, 'getTokenAccountsByOwner', [
         walletAddress,
         { programId },
         { encoding: 'jsonParsed', commitment: 'confirmed' },
@@ -91,7 +88,10 @@ export async function fetchOpendexSolanaPortfolio(
         Number(knownStablecoinMints.has(right)) - Number(knownStablecoinMints.has(left)),
     )
     .slice(0, maximumEnrichedMints);
-  const metadata = await fetchMetadata(apiBase, headers, [wrappedSolMint, ...selectedMints]);
+  const metadata = await fetchMetadata(apiBase, enrichmentHeaders, [
+    wrappedSolMint,
+    ...selectedMints,
+  ]);
   const solBalance = balanceResult / 1_000_000_000;
   const solPrice = price(metadata.get(wrappedSolMint)?.quote?.priceUsd);
   const solUsdValue = solPrice === null ? null : solBalance * solPrice;
@@ -130,39 +130,39 @@ export async function fetchOpendexSolanaPortfolio(
   };
 }
 
-async function rpc<T>(
-  apiBase: string,
-  headers: Record<string, string>,
+async function solanaRpc<T>(
+  rpcUrl: string,
   method: string,
   params: readonly unknown[],
 ): Promise<T extends number ? number : readonly TokenAccount[]> {
   let response: Response;
   try {
-    response = await fetch(`${apiBase}${rpcPath}`, {
+    response = await fetch(rpcUrl, {
       method: 'POST',
       cache: 'no-store',
-      headers,
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: method, method, params }),
     });
   } catch {
-    throw new OpendexPortfolioError('OpenDEX could not retrieve this wallet right now.');
+    throw new SolanaPortfolioError('Solana could not retrieve this wallet right now.');
   }
   if (!response.ok)
-    throw new OpendexPortfolioError('OpenDEX could not retrieve this wallet right now.');
+    throw new SolanaPortfolioError('Solana could not retrieve this wallet right now.');
   const body = (await response.json()) as RpcResponse<
     T extends number ? Readonly<{ value?: number }> : Readonly<{ value?: readonly TokenAccount[] }>
   >;
   if (body.error || body.result?.value === undefined)
-    throw new OpendexPortfolioError('OpenDEX could not retrieve this wallet right now.');
+    throw new SolanaPortfolioError('Solana could not retrieve this wallet right now.');
   return body.result.value as T extends number ? number : readonly TokenAccount[];
 }
 
 async function fetchMetadata(
   apiBase: string,
-  headers: Record<string, string>,
+  headers: Record<string, string> | undefined,
   mints: readonly string[],
 ): Promise<Map<string, TokenSearchResult>> {
   const result = new Map<string, TokenSearchResult>();
+  if (!headers) return result;
   for (let offset = 0; offset < mints.length; offset += lookupBatchSize) {
     const query = new URLSearchParams();
     for (const mint of mints.slice(offset, offset + lookupBatchSize))

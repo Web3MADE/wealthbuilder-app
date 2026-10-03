@@ -63,19 +63,33 @@ describe('Solana strategy service', () => {
   it('strictly validates the bounded AI explanation response', () => {
     expect(
       SolanaMatchExplanationSchema.safeParse({
-        headline: 'A match',
-        summary: 'A short explanation.',
-        reasons: ['One reason', 'Two reasons'],
+        headline: 'A strategy that may fit',
+        summary: 'A short explanation based on the supplied answers.',
+        whyThisFits: ['One reason', 'Another reason', 'A third reason'],
+        walletInsight: 'The visible holdings provide context for this example.',
         riskNote: 'Review before any action.',
+        reviewWhen: ['Your goal changes.', 'You may need the money sooner.'],
       }).success,
     ).toBe(true);
     expect(
       SolanaMatchExplanationSchema.safeParse({
-        headline: 'A match',
-        summary: 'A short explanation.',
-        reasons: ['One reason'],
+        headline: 'A strategy that may fit',
+        summary: 'A short explanation based on the supplied answers.',
+        whyThisFits: ['One reason', 'Another reason', 'A third reason'],
+        walletInsight: 'The visible holdings provide context for this example.',
         riskNote: 'Review before any action.',
+        reviewWhen: ['Your goal changes.', 'You may need the money sooner.'],
         protocol: 'AI cannot add this',
+      }).success,
+    ).toBe(false);
+    expect(
+      SolanaMatchExplanationSchema.safeParse({
+        headline: 'A strategy that may fit',
+        summary: 'You should use this approach.',
+        whyThisFits: ['One reason', 'Another reason', 'A third reason'],
+        walletInsight: 'The visible holdings provide context for this example.',
+        riskNote: 'Review before any action.',
+        reviewWhen: ['Your goal changes.', 'You may need the money sooner.'],
       }).success,
     ).toBe(false);
   });

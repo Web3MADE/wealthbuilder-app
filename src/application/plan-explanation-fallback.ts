@@ -24,12 +24,12 @@ export function deterministicPlanExplanation(
       : `The remaining ${reserve.percent}% stays in ${reserve.label.toLowerCase()}.`;
 
   return {
-    headline: `${input.opportunity.name} target for your stated plan`,
-    summary: `${input.opportunity.name} is the selected strategy for the supported assets visible in this public snapshot. The target uses ${productive.percent}% for ${productive.label.toLowerCase()}. ${reserveDescription}`,
+    headline: `${input.opportunity.name} example for your crypto plan`,
+    summary: `${input.opportunity.name} is one approach that may align with the supported assets visible in this public snapshot. This example allocation uses ${productive.percent}% for ${productive.label.toLowerCase()}. ${reserveDescription}`,
     whyThisFits: input.deterministicReasons.slice(0, 3),
     walletInsight: walletInsight(input.wealthProfile, input.walletSnapshot),
     riskNote:
-      'This is a suggested target based on a partial public snapshot, not a complete wallet allocation.',
+      'This example allocation is based on a partial public snapshot, not a complete wallet allocation.',
     reviewWhen: [
       'You expect to need this money sooner.',
       'Your goal or stated comfort with large drops changes.',

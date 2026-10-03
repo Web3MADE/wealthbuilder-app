@@ -59,3 +59,18 @@ export const planSubmissions = pgTable('plan_submissions', {
   aiExplanation: jsonb('ai_explanation'),
   error: text('error'),
 });
+
+export const intakeSubmissions = pgTable('intake_submissions', {
+  id: text('id').primaryKey(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  goal: text('goal').notNull(),
+  portfolio: text('portfolio').notNull(),
+  timeHorizon: text('time_horizon').notNull(),
+  liquidityPreference: text('liquidity_preference').notNull(),
+  riskPreference: text('risk_preference').notNull(),
+  cryptoExperience: text('crypto_experience').notNull(),
+  additionalContext: text('additional_context'),
+  email: text('email').notNull(),
+  contactHandle: text('contact_handle'),
+  status: text('status').notNull().default('new'),
+});

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  fetchOpendexSolanaPortfolio,
-  OpendexPortfolioError,
+  fetchSolanaPortfolio,
+  SolanaPortfolioError,
 } from '@/infrastructure/solana/opendex-solana-portfolio';
 
 const usdcMint = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -10,11 +10,14 @@ const wrappedSolMint = 'So11111111111111111111111111111111111111112';
 afterEach(() => {
   vi.unstubAllGlobals();
   delete process.env.OPENDEX_API_KEY;
+  delete process.env.OPENDEX_API_BASE_URL;
+  delete process.env.SOLANA_MAINNET_RPC_URL;
 });
 
-describe('OpenDEX Solana portfolio reader', () => {
-  it('reads native and aggregated SPL balances without trader analytics', async () => {
+describe('Solana portfolio reader', () => {
+  it('reads native and aggregated SPL balances from Solana RPC and enriches with OpenDEX', async () => {
     process.env.OPENDEX_API_KEY = 'test-key';
+    process.env.SOLANA_MAINNET_RPC_URL = 'https://solana-rpc.example';
     const requests: { url: string; body: Record<string, unknown> | undefined }[] = [];
     vi.stubGlobal(
       'fetch',
@@ -53,7 +56,7 @@ describe('OpenDEX Solana portfolio reader', () => {
       }),
     );
 
-    const portfolio = await fetchOpendexSolanaPortfolio('wallet');
+    const portfolio = await fetchSolanaPortfolio('wallet');
 
     expect(portfolio).toMatchObject({
       solBalance: '2',
@@ -64,11 +67,17 @@ describe('OpenDEX Solana portfolio reader', () => {
     expect(portfolio.topTokenHoldings).toEqual([
       { mint: usdcMint, name: 'USD Coin', symbol: 'USDC', amount: '20', usdValue: 20 },
     ]);
-    expect(requests.filter(({ url }) => url.endsWith('/rpc/sol'))).toHaveLength(3);
+    expect(requests.filter(({ url }) => url === 'https://solana-rpc.example')).toHaveLength(3);
+    expect(requests.some(({ url }) => url.includes('/rpc/sol'))).toBe(false);
+    expect(
+      requests
+        .filter(({ url }) => url === 'https://solana-rpc.example')
+        .map(({ body }) => body?.method),
+    ).toEqual(['getBalance', 'getTokenAccountsByOwner', 'getTokenAccountsByOwner']);
     expect(requests.some(({ url }) => url.includes('/v2/traders/'))).toBe(false);
   });
 
-  it('keeps unpriced holdings visible when metadata lookup fails', async () => {
+  it('keeps Token-2022 and unpriced holdings visible when metadata lookup fails', async () => {
     process.env.OPENDEX_API_KEY = 'test-key';
     vi.stubGlobal(
       'fetch',
@@ -77,17 +86,23 @@ describe('OpenDEX Solana portfolio reader', () => {
           ? (JSON.parse(String(init.body)) as Record<string, unknown>)
           : undefined;
         if (body?.method === 'getBalance') return Response.json({ result: { value: 0 } });
-        if (body?.method === 'getTokenAccountsByOwner')
-          return Response.json({ result: { value: [tokenAccount('unknown-mint', '3')] } });
+        if (body?.method === 'getTokenAccountsByOwner') {
+          const program = (body.params as { programId: string }[])[1]!.programId;
+          return Response.json({
+            result: {
+              value: program.startsWith('Tokenz') ? [tokenAccount('unknown-mint', '3')] : [],
+            },
+          });
+        }
         return new Response('unavailable', { status: 503 });
       }),
     );
 
-    const portfolio = await fetchOpendexSolanaPortfolio('wallet');
+    const portfolio = await fetchSolanaPortfolio('wallet');
 
     expect(portfolio.topTokenHoldings[0]).toMatchObject({
       mint: 'unknown-mint',
-      amount: '6',
+      amount: '3',
       usdValue: null,
     });
     expect(portfolio.isPartial).toBe(true);
@@ -97,8 +112,8 @@ describe('OpenDEX Solana portfolio reader', () => {
     process.env.OPENDEX_API_KEY = 'test-key';
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('fetch failed')));
 
-    await expect(fetchOpendexSolanaPortfolio('wallet')).rejects.toEqual(
-      new OpendexPortfolioError('OpenDEX could not retrieve this wallet right now.'),
+    await expect(fetchSolanaPortfolio('wallet')).rejects.toEqual(
+      new SolanaPortfolioError('Solana could not retrieve this wallet right now.'),
     );
   });
 });

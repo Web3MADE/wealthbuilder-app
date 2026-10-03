@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { POST } from '@/app/api/plan/route';
 
+const intakeRequest = {
+  goal: 'I wanna get rich',
+  portfolio: 'SOL 40%, BTC 30%, USDC 30%',
+  timeHorizon: '3-5-years',
+  liquidityPreference: 'some',
+  riskPreference: 'balanced',
+  cryptoExperience: 'comfortable',
+  email: 'person@example.com',
+};
+
 async function validationError(body: unknown) {
   const response = await POST(
     new Request('http://localhost/api/plan', {
@@ -14,60 +24,34 @@ async function validationError(body: unknown) {
   return (await response.json()) as { error: string };
 }
 
-const exampleRequest = {
-  source: 'example',
-  examplePreset: 'sol-heavy',
-  goalText: 'I want to grow my money',
-  timeHorizon: '3-5-years',
-  dropBehavior: 'hold',
-};
-
-describe('plan request validation', () => {
-  it('accepts the current example submission contract', async () => {
+describe('intake request validation', () => {
+  it('accepts a complete intake request through validation', async () => {
     const response = await POST(
       new Request('http://localhost/api/plan', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(exampleRequest),
+        body: JSON.stringify(intakeRequest),
       }),
     );
 
     expect(response.status).not.toBe(400);
   });
 
-  it('returns the goal text validation message', async () => {
-    await expect(validationError({ ...exampleRequest, goalText: ' ' })).resolves.toEqual({
-      error: 'Tell us a little more about what you want from crypto.',
+  it('accepts simple goals and rejects missing required context', async () => {
+    await expect(validationError({ ...intakeRequest, goal: ' ' })).resolves.toEqual({
+      error: 'Tell us a little about what you want from crypto.',
+    });
+    await expect(validationError({ ...intakeRequest, portfolio: ' ' })).resolves.toEqual({
+      error: 'Tell us roughly what your portfolio looks like.',
     });
   });
 
-  it('returns the source-specific selection messages', async () => {
-    await expect(
-      validationError({
-        source: 'example',
-        goalText: exampleRequest.goalText,
-        timeHorizon: exampleRequest.timeHorizon,
-        dropBehavior: exampleRequest.dropBehavior,
-      }),
-    ).resolves.toEqual({ error: 'Choose an example portfolio.' });
-
-    await expect(
-      validationError({
-        source: 'wallet',
-        goalText: exampleRequest.goalText,
-        timeHorizon: exampleRequest.timeHorizon,
-        dropBehavior: exampleRequest.dropBehavior,
-      }),
-    ).resolves.toEqual({ error: 'Enter a Solana wallet address.' });
-  });
-
-  it('returns the timeline and drop-behavior validation messages', async () => {
-    await expect(validationError({ ...exampleRequest, timeHorizon: undefined })).resolves.toEqual({
-      error: 'Choose when you may need this money.',
+  it('requires preferences and a valid email', async () => {
+    await expect(validationError({ ...intakeRequest, timeHorizon: undefined })).resolves.toEqual({
+      error: 'Choose when you might need this money.',
     });
-
-    await expect(validationError({ ...exampleRequest, dropBehavior: undefined })).resolves.toEqual({
-      error: "Choose how you think you'd react to a large drop.",
+    await expect(validationError({ ...intakeRequest, email: 'not-an-email' })).resolves.toEqual({
+      error: 'Enter a valid email address.',
     });
   });
 });
